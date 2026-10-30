@@ -76,7 +76,7 @@ private struct DictationPanelView: View {
                         }
                     }
                     .frame(width: Theme.Size.dictationPanel.width, height: Theme.Size.dictationPanel.height)
-                    .glassEffect(.regular, in: .capsule)
+                    .compatibleGlassEffect(in: Capsule())
         }
     }
 }
