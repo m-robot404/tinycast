@@ -1,9 +1,6 @@
 name: Ventura 13 compatibility audit
 
 on:
-  push:
-    branches:
-      - ventura-13-port
   pull_request:
     branches:
       - main
@@ -16,6 +13,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: ventura-13-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
