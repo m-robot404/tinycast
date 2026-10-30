@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct ClipboardScreen: PaletteScreen {
     let store: ClipboardStore
@@ -175,13 +176,15 @@ private struct ClipFollowObserver<Content: View>: View {
     @State private var previous: ClipFollowKey?
 
     var body: some View {
-        content
-            .onAppear { previous = value }
-            .onChange(of: value) { newValue in
-                let oldValue = previous
-                previous = newValue
-                onChange(oldValue, newValue)
-            }
+        WithObservationTracking {
+            content
+                        .onAppear { previous = value }
+                        .onChange(of: value) { newValue in
+                            let oldValue = previous
+                            previous = newValue
+                            onChange(oldValue, newValue)
+                        }
+        }
     }
 }
 
