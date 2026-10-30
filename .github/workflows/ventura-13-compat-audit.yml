@@ -19,20 +19,20 @@ permissions:
 
 jobs:
   build:
-    # Use the current SDK to understand the repository's project format; compile
-    # with a Ventura deployment target to surface APIs unavailable on macOS 13.
-    runs-on: xcode-27
+    # Xcode 16.4's SDK can target macOS 13 and catches accidental dependencies
+    # on newer SDK-only symbols. The build runner itself is not Ventura.
+    runs-on: macos-15
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
-      - name: Select Xcode 27
+      - name: Select Xcode 16.4
         shell: bash
         run: |
           set -euo pipefail
-          XCODE_PATH="$(find -E /Applications -maxdepth 1 -type d -regex '.*/Xcode_27(\.[0-9]+)*\.app' | sort -V | tail -n1)"
-          if [[ -z "$XCODE_PATH" ]]; then
-            echo "::error::No released Xcode 27.x found on this runner image."
+          XCODE_PATH="/Applications/Xcode_16.4.app"
+          if [[ ! -d "$XCODE_PATH" ]]; then
+            echo "::error::Xcode 16.4 is not installed on this runner image."
             ls -1 /Applications | grep -i Xcode || true
             exit 1
           fi
@@ -53,6 +53,14 @@ jobs:
             MACOSX_DEPLOYMENT_TARGET=13.0 \
             CODE_SIGNING_ALLOWED=NO \
             build 2>&1 | tee "$RUNNER_TEMP/ventura-build.log"
+
+      - name: Upload unsigned Apple Silicon app build
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tinycast-ventura13-unsigned-arm64
+          path: "${{ runner.temp }}/VenturaDerivedData/Build/Products/Debug/Tinycast Dev.app"
+          if-no-files-found: error
 
       - name: Upload build diagnostics
         if: always()
