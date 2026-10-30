@@ -46,19 +46,7 @@ struct ChatTranscriptView: View {
                             // Not lazy: every anchored jump and the end test measure an estimated height
                             VStack(spacing: metrics.spacing.xl) {
                                 ForEach(messages) { message in
-                                    let isLast = message.id == messages.last?.id
-                                    ChatMessageView(
-                                        message: message,
-                                        surface: surface,
-                                        status: isLast ? status : nil,
-                                        onRegenerate: isLast && message.role == .assistant
-                                            ? onRegenerate : nil,
-                                        // Only the latest reply's choices still answer anything.
-                                        onChoose: isLast && message.state == .complete ? onChoose : nil
-                                    )
-                                    .equatable()
-                                    .environment(\.chatTextHighlight, highlight(for: message.id))
-                                    .id(message.id)
+                                    messageRow(message)
                                 }
                                 if let total = usage?.totalTokens {
                                     Text("\(total.formatted()) tokens")
@@ -131,6 +119,24 @@ struct ChatTranscriptView: View {
                         }
                     }
         }
+    }
+
+    private func messageRow(_ message: ChatMessage) -> some View {
+        let isLast = message.id == messages.last?.id
+        let regenerate: (() -> Void)? =
+            isLast && message.role == .assistant ? onRegenerate : nil
+        let choose: ((String) -> Void)? =
+            isLast && message.state == .complete ? onChoose : nil
+        return ChatMessageView(
+            message: message,
+            surface: surface,
+            status: isLast ? status : nil,
+            onRegenerate: regenerate,
+            onChoose: choose
+        )
+        .equatable()
+        .environment(\.chatTextHighlight, highlight(for: message.id))
+        .id(message.id)
     }
 
     private func highlight(for id: UUID) -> ChatTextHighlight? {
