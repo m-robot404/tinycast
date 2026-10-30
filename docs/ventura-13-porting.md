@@ -14,13 +14,17 @@
 ## Porting sequence
 
 ### Phase 1 — establish a Ventura-compatible toolchain and baseline
-- Use the dedicated Xcode 27 Apple Silicon CI runner with `MACOSX_DEPLOYMENT_TARGET=13.0` for compiler diagnostics. A later validation gate must still build and launch on an actual Ventura 13 Mac.
+- Use the `macos-26` Apple Silicon GitHub Actions runner and its preselected Xcode 26.6 / macOS 26.5 SDK with `MACOSX_DEPLOYMENT_TARGET=13.0` for compiler diagnostics. A later validation gate must still build and launch on an actual Ventura 13 Mac.
 - Keep this branch separate from `main`.
 - Run a full build of the app scheme, including embedded helper targets, with code signing disabled for CI diagnostics.
 
 ### Phase 2 — platform compatibility layer
 - [x] Replace the direct `NSGlassEffectView` dependency with a platform abstraction. The branch now uses native glass only with a sufficiently new compiler on macOS 26+, and falls back to `NSVisualEffectView` on Ventura.
 - [x] Replace the macOS 15-only Swift Vision `RecognizeTextRequest` calls in clipboard OCR with Ventura-compatible `VNRecognizeTextRequest` and `VNImageRequestHandler`.
+- [x] Replace the macOS 15 `Synchronization.Mutex` usage in `FileIndex` and the dictation downloader with the `NSLock`-backed `LockedValue` compatibility type.
+- [x] Replace the macOS 15 `String(validating:as:)` initializer with `String(data:encoding:)` for UTF-8 file previews.
+- [x] Replace the newer parameterless `NSApp.activate()` call with the Ventura-compatible AppKit activation method.
+- [x] Route the dictation panel's Liquid Glass effect through the Ventura material fallback.
 - Remove or replace APIs with no safe Ventura equivalent; do not silently no-op essential launcher behavior.
 
 ### Phase 3 — observation and UI migration
@@ -47,6 +51,8 @@
 - `docs/development.md`: macOS 26 / Xcode 27 toolchain requirement.
 - `Tinycast/DesignSystem/GlassEffectView.swift`: guarded native glass view with AppKit fallback.
 - `Tinycast/Features/Clipboard/Service/ClipboardTextExtractor.swift`: Ventura-compatible Vision OCR path.
+- `Tinycast/Platform/LockedValue.swift`: `NSLock`-based replacement for `Synchronization.Mutex`.
+- `Tinycast/Features/FileSearch/Model/FileSearchPreviewKind.swift`: Foundation UTF-8 validation using the macOS 13 API.
 - `Tinycast/App/AppCore.swift`: Observation macros and `withObservationTracking`, now prepared through the pinned `ObservationPolyfill` dependency.
 - `Scripts/prepare-ventura13.py`: imports the backport and wraps SwiftUI view bodies before compilation.
 - `project.yml`: pins `moreswift/swift-observation-polyfill` to revision `d8843fa6dbf970aab42faaf101c9ce1cfd16fb94`.
