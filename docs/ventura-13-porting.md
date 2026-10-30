@@ -6,7 +6,7 @@
 
 1. `project.yml` declares macOS 26.0 and Swift 6.0. The checked-in Xcode project is generated from this file.
 2. `docs/development.md` requires macOS 26 and Xcode 27, explicitly citing Liquid Glass and the SwiftUI macro plugin.
-3. `Tinycast/DesignSystem/GlassEffectView.swift` directly instantiates `NSGlassEffectView`. That type is not available in the macOS 13 SDK. A deployment-target change cannot make an SDK symbol exist.
+3. `Tinycast/DesignSystem/GlassEffectView.swift` originally instantiated `NSGlassEffectView` unconditionally. This branch now guards the newer symbol and provides an `NSVisualEffectView` fallback; the compatibility build must still confirm it compiles against an older SDK.
 4. The architecture document records 39 `@Observable` model types, and `AppCore.swift` is one concrete example. SwiftUI's native Observation integration begins at macOS 14, so Ventura needs a deliberate compatibility implementation (for example, a tested Observation backport plus corresponding SwiftUI view/environment changes) or a larger migration to `ObservableObject` / `@Published`.
 5. The project embeds several helper applications and has extensive use of AppKit, SwiftUI, system services, and modern APIs. Each helper target and every API newer than macOS 13 must be audited independently; compiling only the main app target is insufficient.
 
@@ -18,7 +18,7 @@
 - Run a full build of the app scheme, including embedded helper targets, with code signing disabled for CI diagnostics.
 
 ### Phase 2 — platform compatibility layer
-- Replace the direct `NSGlassEffectView` dependency with a platform abstraction. Use the native glass view only when compiling with an SDK that declares it and use an AppKit visual-effect fallback on Ventura.
+- [x] Replace the direct `NSGlassEffectView` dependency with a platform abstraction. The branch now uses native glass only with a sufficiently new compiler on macOS 26+, and falls back to `NSVisualEffectView` on Ventura.
 - Inventory all macOS 14–26 API references and add compile-time/runtime fallbacks where a Ventura equivalent exists.
 - Remove or replace APIs with no safe Ventura equivalent; do not silently no-op essential launcher behavior.
 
