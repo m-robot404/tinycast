@@ -53,6 +53,11 @@ final class QwenRecognizer {
     }
 
     private func decode(_ samples: ArraySlice<Float>, language: String?) throws -> String {
+        // Core ML stateful prediction is available from macOS 15. Parakeet remains the
+        // supported on-device recognizer on Ventura and earlier releases.
+        guard #available(macOS 15.0, *) else {
+            throw DictationInferenceError.incompatibleModel
+        }
         let spectrum = try mel.features(samples)
         let count = DictationMel.embeddingCount(frames: spectrum.frames)
         let state = decoder.makeState()
