@@ -24,13 +24,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Select Xcode 16.4
+      - name: Select Xcode 27
         shell: bash
         run: |
           set -euo pipefail
-          XCODE_PATH="/Applications/Xcode_16.4.app"
-          if [[ ! -d "$XCODE_PATH" ]]; then
-            echo "::error::Xcode 16.4 is not installed on this runner image."
+          XCODE_PATH="$(find -E /Applications -maxdepth 1 -type d -regex '.*/Xcode_27(\\.[0-9]+)*\\.app' | sort -V | tail -n1)"
+          if [[ -z "$XCODE_PATH" ]]; then
+            echo "::error::No released Xcode 27.x found on this runner image."
             ls -1 /Applications | grep -i Xcode || true
             exit 1
           fi
