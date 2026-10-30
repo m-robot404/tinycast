@@ -24,7 +24,9 @@
 - Remove or replace APIs with no safe Ventura equivalent; do not silently no-op essential launcher behavior.
 
 ### Phase 3 — observation and UI migration
-- Choose one observation strategy for macOS 13. A backport requires updating imports, observable annotations, and SwiftUI tracking/environment call sites consistently. A partial macro substitution is not sufficient.
+- [x] Add the pinned `ObservationPolyfill` package for the native `@Observable`, `@ObservationIgnored`, `@Bindable`, and typed `@Environment` APIs on macOS 13.
+- [x] Add an idempotent preparation script that imports the backport where required and wraps SwiftUI `View.body` implementations in `WithObservationTracking`.
+- Review escaping SwiftUI closures (`sheet`, `popover`, `GeometryReader`, lazy containers, navigation destinations) for model reads that need their own tracking wrapper; validate with runtime diagnostics on Ventura.
 - Review every use of newer SwiftUI view modifiers, controls, menu-bar behavior, and AppKit window APIs.
 - Preserve state propagation and keyboard focus behavior in tests.
 
@@ -45,9 +47,11 @@
 - `docs/development.md`: macOS 26 / Xcode 27 toolchain requirement.
 - `Tinycast/DesignSystem/GlassEffectView.swift`: guarded native glass view with AppKit fallback.
 - `Tinycast/Features/Clipboard/Service/ClipboardTextExtractor.swift`: Ventura-compatible Vision OCR path.
-- `Tinycast/App/AppCore.swift`: native `@Observable` usage.
+- `Tinycast/App/AppCore.swift`: Observation macros and `withObservationTracking`, now prepared through the pinned `ObservationPolyfill` dependency.
+- `Scripts/prepare-ventura13.py`: imports the backport and wraps SwiftUI view bodies before compilation.
+- `project.yml`: pins `moreswift/swift-observation-polyfill` to revision `d8843fa6dbf970aab42faaf101c9ce1cfd16fb94`.
 - Apple documents SwiftUI Observation support from macOS 14: https://developer.apple.com/documentation/swiftui/migrating-from-the-observable-object-protocol-to-the-observable-macro
 
 ## Important
 
-This audit is not a compatibility claim and does not ship an app. The CI workflow on this branch is a diagnostic compile attempt against a macOS 13 deployment target; its first failures must be fixed in source before a Ventura build can be claimed.
+This audit is not a compatibility claim and does not ship an app. The CI workflow regenerates the Xcode project from `project.yml`, prepares the Observation backport, and attempts a full arm64 compile with a macOS 13 deployment target. A successful compile is not enough: escaping closure tracking and all runtime integrations still require a real Ventura test.
