@@ -85,7 +85,7 @@ struct DictationSettingsView: View {
 
                 Section {
                     Picker(selection: familyBinding) {
-                        ForEach(DictationModel.Family.allCases) { family in
+                        ForEach(DictationModel.Family.allCases.filter(\.isAvailableOnCurrentOS)) { family in
                             Text(family.rawValue).tag(family)
                         }
                     } label: {
@@ -95,7 +95,9 @@ struct DictationSettingsView: View {
                     }
                     Picker(selection: $settings.dictationModel) {
                         ForEach(
-                            DictationModel.allCases.filter { $0.family == settings.dictationModel.family }
+                            DictationModel.allCases.filter {
+                                $0.family == settings.dictationModel.family && $0.isAvailableOnCurrentOS
+                            }
                         ) { model in
                             Text(model.variantTitle).tag(model)
                         }
@@ -198,6 +200,9 @@ struct DictationSettingsView: View {
         .formStyle(.grouped)
         .settingsScrollTarget(.dictation)
         .onAppear {
+            if !settings.dictationModel.isAvailableOnCurrentOS {
+                settings.dictationModel = .redux
+            }
             microphoneAccess = Permissions.microphoneAccess()
             if settings.dictationEnabled { microphones = DictationCapture.microphones }
         }
