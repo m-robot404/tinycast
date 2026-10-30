@@ -34,7 +34,7 @@ struct HyperKeySettingsSection: View {
 
     var body: some View {
         WithObservationTracking {
-            @Bindable var settings = settings
+            @ObservationPolyfill.Bindable var settings = settings
                     Section {
                         Picker(selection: hyperKeySelection) {
                             ForEach(HyperKeyPhysicalKey.allCases) { key in

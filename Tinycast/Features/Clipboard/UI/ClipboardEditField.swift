@@ -13,7 +13,7 @@ final class ClipboardEditState {
 
 struct ClipboardEditField: View {
     @Environment(\.metrics) private var metrics
-    @Bindable var state: ClipboardEditState
+    @ObservationPolyfill.Bindable var state: ClipboardEditState
 
     var body: some View {
         WithObservationTracking {

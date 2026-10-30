@@ -8,7 +8,7 @@ struct CommandsSettingsView: View {
 
     var body: some View {
         WithObservationTracking {
-            @Bindable var settings = settings
+            @ObservationPolyfill.Bindable var settings = settings
                     Form {
                         LauncherCategorySwitchSection(
                             kind: .command, anchor: .commandsCommands, title: "Enable Commands")

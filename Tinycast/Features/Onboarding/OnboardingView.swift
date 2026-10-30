@@ -142,7 +142,7 @@ struct OnboardingView: View {
     }
 
     private var shortcutStep: some View {
-        @Bindable var settings = settings
+        @ObservationPolyfill.Bindable var settings = settings
         return VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             OnboardingCard {
                 OnboardingRow(

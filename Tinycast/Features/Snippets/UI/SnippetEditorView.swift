@@ -2,7 +2,7 @@ import SwiftUI
 import ObservationPolyfill
 
 struct SnippetEditorView: View {
-    @Bindable var editor: SnippetEditorSession
+    @ObservationPolyfill.Bindable var editor: SnippetEditorSession
     let openInputMenu: (PopoverMenuContent, MenuPanelCorner, Int) -> Void
 
     @Environment(SnippetCoordinator.self) private var coordinator

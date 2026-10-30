@@ -121,6 +121,7 @@
 		2357B6890CBD2698A8E839C1 /* ChatComposerChips.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD8BC47B03C5DFDC3FAE752D /* ChatComposerChips.swift */; };
 		23D0CB4EA4396AF5F7A24780 /* MathFormula.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D85BC3DABE5D072E59B65EA /* MathFormula.swift */; };
 		23E8792D69F3F1C539BC3BC6 /* ExtensionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD8CDDBAC59480E1A7559278 /* ExtensionManager.swift */; };
+		23F340E9B2F2C645D85F1B96 /* LockedValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 428E0540CF47A4313EFA900E /* LockedValue.swift */; };
 		23F808ECC9100FFCBE5DA0F7 /* SettingsWindowChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3CE1A1626264322E8A1192E /* SettingsWindowChrome.swift */; };
 		24774D18B408004B9016A007 /* WindowLayoutStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 112FAE46D58E17331C1CEEAF /* WindowLayoutStore.swift */; };
 		24BDA1C2A8F9A6026D4EFA65 /* CalcNumberBase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50A8322A12267B2A82422281 /* CalcNumberBase.swift */; };
@@ -1131,6 +1132,7 @@
 		418DA899A1546F3B4AC44777 /* GeneralSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GeneralSettingsView.swift; sourceTree = "<group>"; };
 		41E419A4DA5AB5B3A87B80F2 /* SnippetsListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetsListView.swift; sourceTree = "<group>"; };
 		41FA492C2712A177DB36E565 /* CalcNumberFormat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalcNumberFormat.swift; sourceTree = "<group>"; };
+		428E0540CF47A4313EFA900E /* LockedValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockedValue.swift; sourceTree = "<group>"; };
 		42A6D9BE2BB5BA09A4A6FEAB /* CommandOutputPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommandOutputPresenter.swift; sourceTree = "<group>"; };
 		42BF5FF516A29ABBECBF576D /* DictationHelper.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DictationHelper.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		433D5E44E58C6759981FE7E1 /* AIChatDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIChatDetailView.swift; sourceTree = "<group>"; };
@@ -1822,6 +1824,7 @@
 				CC02192DE787DBE081C589B8 /* KeychainSecretStore.swift */,
 				3BA9F5F7226AD5A91835AF5C /* LaunchAtLogin.swift */,
 				C7C0F66A568B254D17C11355 /* LocalizedResource.swift */,
+				428E0540CF47A4313EFA900E /* LockedValue.swift */,
 				EB76FDBFE1E306C2A5B1A29B /* Memo.swift */,
 				E1FB75182A60F65BA1FB9BA8 /* NotificationToken.swift */,
 				2E5C752F98428A767405AD12 /* PasteboardFiles.swift */,
@@ -4503,6 +4506,7 @@
 				2E05FC5D5A0C2BACE7DB8CDD /* LauncherSuggestions.swift in Sources */,
 				67516BE31774EE56EE2173BA /* LeadCard.swift in Sources */,
 				DF4EA86957A4C9F17C5F9FE5 /* LocalizedResource.swift in Sources */,
+				23F340E9B2F2C645D85F1B96 /* LockedValue.swift in Sources */,
 				50A5E2CC839C7A65B3391391 /* MCPComposerAddress.swift in Sources */,
 				F37AC0478A0A96243E833900 /* MCPCoordinator.swift in Sources */,
 				B374B57D0E9D902AF877153D /* MCPHTTPTransport.swift in Sources */,

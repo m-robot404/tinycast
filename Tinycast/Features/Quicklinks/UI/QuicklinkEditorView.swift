@@ -2,7 +2,7 @@ import SwiftUI
 import ObservationPolyfill
 
 struct QuicklinkEditorView: View {
-    @Bindable var editor: QuicklinkEditorSession
+    @ObservationPolyfill.Bindable var editor: QuicklinkEditorSession
     let openMenuCorner: MenuPanelCorner?
     let openInputMenu: (PopoverMenuContent, MenuPanelCorner, Int) -> Void
 

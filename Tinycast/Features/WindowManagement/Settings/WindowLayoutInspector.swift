@@ -48,7 +48,7 @@ struct WindowLayoutInspector: View {
 
     /// The picker lives inside the field's chrome, so name and icon read as the one control.
     private var nameField: some View {
-        @Bindable var draft = draft
+        @ObservationPolyfill.Bindable var draft = draft
         return VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
             sectionLabel("Name")
             HStack(spacing: Theme.Spacing.sm) {
@@ -85,7 +85,7 @@ struct WindowLayoutInspector: View {
     }
 
     private var gapToggle: some View {
-        @Bindable var draft = draft
+        @ObservationPolyfill.Bindable var draft = draft
         return switchRow(
             "Use preferred gap",
             detail: "Inset every window by the gap set above, as the tiling commands do.",
@@ -95,7 +95,7 @@ struct WindowLayoutInspector: View {
     // MARK: - The entry being edited
 
     private var frontmostToggle: some View {
-        @Bindable var draft = draft
+        @ObservationPolyfill.Bindable var draft = draft
         return switchRow(
             "Bring to front",
             detail: "Focus this window once the layout finishes. Only one window per layout.",

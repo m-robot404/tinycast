@@ -2,7 +2,7 @@ import SwiftUI
 import ObservationPolyfill
 
 struct EventEditorView: View {
-    @Bindable var editor: EventEditorSession
+    @ObservationPolyfill.Bindable var editor: EventEditorSession
     let openMenuCorner: MenuPanelCorner?
     let openInputMenu: (PopoverMenuContent, MenuPanelCorner, Int) -> Void
 

@@ -136,7 +136,7 @@ private struct ExtensionToolchainFields: View {
 
     var body: some View {
         WithObservationTracking {
-            @Bindable var settings = core.settings
+            @ObservationPolyfill.Bindable var settings = core.settings
                     VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
                         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                             HStack {

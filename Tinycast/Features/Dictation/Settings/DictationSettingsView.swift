@@ -11,7 +11,7 @@ struct DictationSettingsView: View {
     @State private var microphoneAccess = Permissions.microphoneAccess()
     var body: some View {
         WithObservationTracking {
-            @Bindable var settings = settings
+            @ObservationPolyfill.Bindable var settings = settings
                     Form {
                         Section {
                             Toggle(isOn: enabledBinding) {

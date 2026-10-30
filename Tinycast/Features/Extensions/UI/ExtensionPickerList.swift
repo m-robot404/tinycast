@@ -133,7 +133,7 @@ struct ExtensionMenuSearchField: View {
 
     var body: some View {
         WithObservationTracking {
-            @Bindable var palette = palette
+            @ObservationPolyfill.Bindable var palette = palette
                     TextField("", text: $palette.menuQuery)
                         .textFieldStyle(.plain)
                         .font(metrics.typography.menuRow)

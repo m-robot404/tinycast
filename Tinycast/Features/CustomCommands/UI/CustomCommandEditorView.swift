@@ -2,7 +2,7 @@ import SwiftUI
 import ObservationPolyfill
 
 struct CustomCommandEditorView: View {
-    @Bindable var editor: CustomCommandEditorSession
+    @ObservationPolyfill.Bindable var editor: CustomCommandEditorSession
     let openMenuCorner: MenuPanelCorner?
     let openInputMenu: (PopoverMenuContent, MenuPanelCorner, Int) -> Void
 

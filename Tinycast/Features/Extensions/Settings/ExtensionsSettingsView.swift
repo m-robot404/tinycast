@@ -22,7 +22,7 @@ struct ExtensionsSettingsView: View {
 
     var body: some View {
         WithObservationTracking {
-            @Bindable var settings = core.settings
+            @ObservationPolyfill.Bindable var settings = core.settings
                     Form {
                         FeatureSwitchSection(
                             anchor: .extensionsExtensions,

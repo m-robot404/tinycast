@@ -12,8 +12,8 @@ struct AISettingsView: View {
 
     var body: some View {
         WithObservationTracking {
-            @Bindable var appSettings = appSettings
-                    @Bindable var settings = settings
+            @ObservationPolyfill.Bindable var appSettings = appSettings
+                    @ObservationPolyfill.Bindable var settings = settings
                     Form {
                         Section {
                             Toggle(isOn: $appSettings.aiEnabled) {
@@ -121,7 +121,7 @@ struct AISettingsView: View {
     }
 
     private var chatSection: some View {
-        @Bindable var settings = settings
+        @ObservationPolyfill.Bindable var settings = settings
         return Section {
             Toggle(isOn: $settings.webSearchEnabled) {
                 SettingsRowTitle(.aiChat, "Web search")
@@ -147,7 +147,7 @@ struct AISettingsView: View {
     }
 
     private var conversationsSection: some View {
-        @Bindable var settings = settings
+        @ObservationPolyfill.Bindable var settings = settings
         return Section {
             Picker(selection: $settings.opensTo) {
                 ForEach(AIOpensTo.allCases) { Text($0.title).tag($0) }
@@ -178,7 +178,7 @@ struct AISettingsView: View {
     }
 
     private var systemPromptSection: some View {
-        @Bindable var settings = settings
+        @ObservationPolyfill.Bindable var settings = settings
         return Section {
             Toggle(isOn: $settings.systemPromptEnabled) {
                 SettingsRowTitle(.aiSystemPrompt, "Send a system prompt")

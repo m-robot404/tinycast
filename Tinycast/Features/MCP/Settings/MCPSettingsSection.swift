@@ -11,7 +11,7 @@ struct MCPSettingsSection: View {
 
     var body: some View {
         WithObservationTracking {
-            @Bindable var appSettings = appSettings
+            @ObservationPolyfill.Bindable var appSettings = appSettings
                     Section {
                         Toggle(isOn: $appSettings.mcpEnabled) {
                             SettingsRowTitle(.aiMCPServers, "Enable MCP servers")

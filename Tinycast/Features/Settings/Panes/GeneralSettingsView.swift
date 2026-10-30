@@ -10,7 +10,7 @@ struct GeneralSettingsView: View {
 
     var body: some View {
         WithObservationTracking {
-            @Bindable var settings = settings
+            @ObservationPolyfill.Bindable var settings = settings
                     Form {
                         Section {
                             SettingsRow(title: "Show Launcher", anchor: .generalGlobalShortcuts) {

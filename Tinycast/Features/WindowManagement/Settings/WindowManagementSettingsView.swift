@@ -11,7 +11,7 @@ struct WindowManagementSettingsView: View {
 
     var body: some View {
         WithObservationTracking {
-            @Bindable var settings = settings
+            @ObservationPolyfill.Bindable var settings = settings
                     Form {
                         FeatureSwitchSection(
                             anchor: .windowManagementWindowManagement,
@@ -63,7 +63,7 @@ struct WindowManagementSettingsView: View {
     }
 
     private var options: some View {
-        @Bindable var settings = settings
+        @ObservationPolyfill.Bindable var settings = settings
         return Section {
             Picker(selection: $settings.windowCycle) {
                 ForEach(WindowCycle.allCases) { cycle in

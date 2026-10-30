@@ -925,7 +925,7 @@ struct RootPaletteView: View {
 
     /// The one search field — empty it's a drag handle, and any text hands every press to editing.
     private var searchField: some View {
-        @Bindable var vm = vm
+        @ObservationPolyfill.Bindable var vm = vm
         return TextField("", text: $vm.query)
             .textFieldStyle(.plain)
             .font(metrics.typography.searchField)

@@ -137,7 +137,7 @@ private struct AIChatComposer: View {
 
     var body: some View {
         WithObservationTracking {
-            @Bindable var chat = chat
+            @ObservationPolyfill.Bindable var chat = chat
                     VStack(alignment: .leading, spacing: Theme.Spacing.md) {
                         if !chat.session.messages.isEmpty, let notice = chat.notice {
                             Label(notice, systemImage: "exclamationmark.triangle")
@@ -341,7 +341,7 @@ private struct AIAddMenu: View {
 
     var body: some View {
         WithObservationTracking {
-            @Bindable var settings = settings
+            @ObservationPolyfill.Bindable var settings = settings
                     Menu {
                         Button("Attach Files…", systemImage: "paperclip") { coordinator.chooseFiles(for: chat) }
                             .help(attachHelp)

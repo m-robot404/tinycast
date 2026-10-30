@@ -9,7 +9,7 @@ struct QuicklinksSettingsView: View {
 
     var body: some View {
         WithObservationTracking {
-            @Bindable var settings = settings
+            @ObservationPolyfill.Bindable var settings = settings
                     Form {
                         FeatureSwitchSection(
                             anchor: .quicklinksQuicklinks,
@@ -83,7 +83,7 @@ struct QuicklinksSettingsView: View {
     }
 
     private var behaviour: some View {
-        @Bindable var settings = settings
+        @ObservationPolyfill.Bindable var settings = settings
         return Section {
             Toggle(isOn: $settings.quicklinkOpensNewWindow) {
                 SettingsRowTitle(.quicklinksBehaviour, "Open in a new window")

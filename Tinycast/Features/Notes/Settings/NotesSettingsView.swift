@@ -7,7 +7,7 @@ struct NotesSettingsView: View {
 
     var body: some View {
         WithObservationTracking {
-            @Bindable var settings = settings
+            @ObservationPolyfill.Bindable var settings = settings
                     Form {
                         Section {
                             Toggle(isOn: $settings.notesEnabled) {

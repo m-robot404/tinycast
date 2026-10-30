@@ -169,7 +169,7 @@ struct PopoverMenu: View {
     }
 
     private var searchField: some View {
-        @Bindable var palette = palette
+        @ObservationPolyfill.Bindable var palette = palette
         let placeholder = search.placeholder
         return TextField("", text: $palette.menuQuery)
             .textFieldStyle(.plain)
