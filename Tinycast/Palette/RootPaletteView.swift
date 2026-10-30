@@ -312,7 +312,7 @@ struct RootPaletteView: View {
                         && screen.hasPrimaryAction(at: sel)
 
                     // One header position, so focus survives the swap. See docs/features/palette.md.
-                    return keyHandlers(
+                    keyHandlers(
                         stateObservers(
                             Group {
                                 if isCollapsed {

@@ -9,7 +9,7 @@ struct CommandsSettingsView: View {
     var body: some View {
         WithObservationTracking {
             @Bindable var settings = settings
-                    return Form {
+                    Form {
                         LauncherCategorySwitchSection(
                             kind: .command, anchor: .commandsCommands, title: "Enable Commands")
 

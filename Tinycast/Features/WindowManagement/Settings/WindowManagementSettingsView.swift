@@ -12,7 +12,7 @@ struct WindowManagementSettingsView: View {
     var body: some View {
         WithObservationTracking {
             @Bindable var settings = settings
-                    return Form {
+                    Form {
                         FeatureSwitchSection(
                             anchor: .windowManagementWindowManagement,
                             enableTitle: "Enable window management",

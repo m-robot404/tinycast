@@ -23,7 +23,7 @@ struct ExtensionsSettingsView: View {
     var body: some View {
         WithObservationTracking {
             @Bindable var settings = core.settings
-                    return Form {
+                    Form {
                         FeatureSwitchSection(
                             anchor: .extensionsExtensions,
                             enableTitle: "Enable extensions",

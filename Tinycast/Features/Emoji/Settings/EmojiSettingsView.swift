@@ -7,7 +7,7 @@ struct EmojiSettingsView: View {
     var body: some View {
         WithObservationTracking {
             @Bindable var settings = settings
-                    return Form {
+                    Form {
                         FeatureCommandsSection(owner: .emoji, anchor: .emojiCommands)
 
                         Section {

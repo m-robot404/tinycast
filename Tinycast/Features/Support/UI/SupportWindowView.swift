@@ -17,7 +17,7 @@ struct SupportWindowView: View {
     var body: some View {
         WithObservationTracking {
             @Bindable var settings = settings
-                    return VStack(spacing: Theme.Spacing.xxl) {
+                    VStack(spacing: Theme.Spacing.xxl) {
                         hero
                         action
                         reminder(isOn: $settings.supportRemindersEnabled)

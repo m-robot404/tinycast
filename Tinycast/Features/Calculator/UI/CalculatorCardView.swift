@@ -43,7 +43,7 @@ struct CalculatorCard: View {
     var body: some View {
         WithObservationTracking {
             let result = core.calcNumberFormat.localized(result)
-                    return Group {
+                    Group {
                         switch result.payload {
                         case .value(let display, _):
                             HStack(spacing: 0) {

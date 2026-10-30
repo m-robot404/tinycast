@@ -8,7 +8,7 @@ struct FileSearchSettingsView: View {
     var body: some View {
         WithObservationTracking {
             @Bindable var settings = settings
-                    return Form {
+                    Form {
                         FeatureSwitchSection(
                             anchor: .fileSearchFileSearch,
                             enableTitle: "Enable File Search",

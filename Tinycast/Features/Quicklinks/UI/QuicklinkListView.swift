@@ -46,7 +46,7 @@ struct QuicklinkList: View {
     var body: some View {
         WithObservationTracking {
             let rows = rows
-                    return ScrollViewReader { proxy in
+                    ScrollViewReader { proxy in
                         ScrollView {
                             LazyVStack(spacing: 0) {
                                 ForEach(rows) { row in
@@ -103,7 +103,7 @@ private struct QuicklinkRow: View {
     var body: some View {
         WithObservationTracking {
             IconCache.observeStyle()
-                    return HStack(spacing: metrics.spacing.lg) {
+                    HStack(spacing: metrics.spacing.lg) {
                         Image(nsImage: IconCache.symbolIcon(named: quicklink.symbol))
                             .resizable()
                             .frame(width: metrics.size.resultRowIcon, height: metrics.size.resultRowIcon)

@@ -137,7 +137,7 @@ private struct ExtensionToolchainFields: View {
     var body: some View {
         WithObservationTracking {
             @Bindable var settings = core.settings
-                    return VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
+                    VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
                         VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
                             HStack {
                                 Text("Package manager").font(.callout.weight(.medium))

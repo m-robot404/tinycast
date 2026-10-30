@@ -72,7 +72,7 @@ struct ExtensionActionsPanel: View {
                         bottomTrailingRadius: metrics.size.menuButton / 2,
                         topTrailingRadius: metrics.radius.menuPanel,
                         style: .continuous)
-                    return VStack(spacing: 0) {
+                    VStack(spacing: 0) {
                         listContent
                         Rectangle()
                             .fill(Theme.Colors.separator)

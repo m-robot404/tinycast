@@ -53,7 +53,7 @@ struct BarButton<Label: View>: View {
     var body: some View {
         WithObservationTracking {
             let shape = chrome.shape(metrics)
-                    return Button(action: action) {
+                    Button(action: action) {
                         label
                             .padding(.horizontal, isCompact ? metrics.spacing.sm : metrics.spacing.md)
                             .frame(height: metrics.size.barButtonHeight)

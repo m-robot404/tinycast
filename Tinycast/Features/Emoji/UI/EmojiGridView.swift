@@ -154,7 +154,7 @@ struct EmojiGridView: View {
     var body: some View {
         WithObservationTracking {
             let items = items
-                    return ScrollViewReader { proxy in
+                    ScrollViewReader { proxy in
                         ScrollView {
                             LazyVStack(spacing: 0) {
                                 ForEach(items) { item in
@@ -316,7 +316,7 @@ private struct EmojiCell: View {
     var body: some View {
         WithObservationTracking {
             let shape = RoundedRectangle(cornerRadius: metrics.radius.emojiCell, style: .continuous)
-                    return ZStack {
+                    ZStack {
                         shape.fill(fill)
                         if selected {
                             // A blurred duplicate keeps every colour in the glyph instead of inventing a tint.

@@ -157,7 +157,7 @@ struct LauncherList: View {
     var body: some View {
         WithObservationTracking {
             let rows = rows
-                    return Group {
+                    Group {
                         if results.isEmpty && favorites.isEmpty && card == nil && files == nil && fallbacks == nil {
                             EmptyResults(text: String(localized: "No apps found"))
                         } else {

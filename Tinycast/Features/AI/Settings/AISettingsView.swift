@@ -14,7 +14,7 @@ struct AISettingsView: View {
         WithObservationTracking {
             @Bindable var appSettings = appSettings
                     @Bindable var settings = settings
-                    return Form {
+                    Form {
                         Section {
                             Toggle(isOn: $appSettings.aiEnabled) {
                                 SettingsFeatureToggleLabel(

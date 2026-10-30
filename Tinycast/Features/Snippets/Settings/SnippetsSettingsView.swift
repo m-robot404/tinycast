@@ -10,7 +10,7 @@ struct SnippetsSettingsView: View {
     var body: some View {
         WithObservationTracking {
             @Bindable var settings = settings
-                    return Form {
+                    Form {
                         FeatureSwitchSection(
                             anchor: .snippetsSnippets,
                             enableTitle: "Enable snippets",

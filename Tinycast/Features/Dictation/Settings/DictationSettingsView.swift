@@ -12,7 +12,7 @@ struct DictationSettingsView: View {
     var body: some View {
         WithObservationTracking {
             @Bindable var settings = settings
-                    return Form {
+                    Form {
                         Section {
                             Toggle(isOn: enabledBinding) {
                                 SettingsFeatureToggleLabel(

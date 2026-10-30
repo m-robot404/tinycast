@@ -10,7 +10,7 @@ struct QuicklinksSettingsView: View {
     var body: some View {
         WithObservationTracking {
             @Bindable var settings = settings
-                    return Form {
+                    Form {
                         FeatureSwitchSection(
                             anchor: .quicklinksQuicklinks,
                             enableTitle: "Enable quicklinks",

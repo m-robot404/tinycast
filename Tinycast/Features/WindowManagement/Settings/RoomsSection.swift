@@ -10,7 +10,7 @@ struct RoomsSection: View {
     var body: some View {
         WithObservationTracking {
             @Bindable var settings = settings
-                    return Section {
+                    Section {
                         Toggle(isOn: $settings.windowRoomsShowInLauncher) {
                             SettingsRowTitle(.windowManagementRooms, "Show rooms in launcher")
                         }

@@ -16,7 +16,7 @@ struct WindowLayoutsSection: View {
     var body: some View {
         WithObservationTracking {
             @Bindable var settings = settings
-                    return Section {
+                    Section {
                         Toggle(isOn: $settings.windowLayoutsShowInLauncher) {
                             SettingsRowTitle(.windowManagementLayouts, "Show layouts in launcher")
                         }

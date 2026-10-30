@@ -59,7 +59,7 @@ struct CustomCommandList: View {
         var body: some View {
             WithObservationTracking {
                 IconCache.observeStyle()
-                            return HStack(spacing: metrics.spacing.lg) {
+                            HStack(spacing: metrics.spacing.lg) {
                                 Image(nsImage: IconCache.symbolIcon(named: command.symbol))
                                     .resizable()
                                     .frame(width: metrics.size.resultRowIcon, height: metrics.size.resultRowIcon)

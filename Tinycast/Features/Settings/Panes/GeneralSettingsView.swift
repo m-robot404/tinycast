@@ -11,7 +11,7 @@ struct GeneralSettingsView: View {
     var body: some View {
         WithObservationTracking {
             @Bindable var settings = settings
-                    return Form {
+                    Form {
                         Section {
                             SettingsRow(title: "Show Launcher", anchor: .generalGlobalShortcuts) {
                                 ShortcutRecorder(action: .togglePalette)
