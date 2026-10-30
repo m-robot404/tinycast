@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct RaycastImportSelection: View {
     @Binding var selection: RaycastImportOptions
@@ -45,30 +46,32 @@ struct RaycastImportSelection: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            LazyVGrid(columns: Self.columns, alignment: .leading, spacing: Theme.Spacing.sm) {
-                ForEach(Self.categories) { category in
-                    Toggle(isOn: included(category.option)) {
-                        HStack(spacing: Theme.Spacing.sm) {
-                            Image(
-                                systemName: SystemSymbolName.resolve(
-                                    category.symbol, isDark: colorScheme == .dark)
-                            )
-                            .foregroundStyle(.secondary)
-                            .frame(width: 16)
-                            Text(category.label).lineLimit(1)
+        WithObservationTracking {
+            VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                        LazyVGrid(columns: Self.columns, alignment: .leading, spacing: Theme.Spacing.sm) {
+                            ForEach(Self.categories) { category in
+                                Toggle(isOn: included(category.option)) {
+                                    HStack(spacing: Theme.Spacing.sm) {
+                                        Image(
+                                            systemName: SystemSymbolName.resolve(
+                                                category.symbol, isDark: colorScheme == .dark)
+                                        )
+                                        .foregroundStyle(.secondary)
+                                        .frame(width: 16)
+                                        Text(category.label).lineLimit(1)
+                                    }
+                                }
+                                .toggleStyle(.checkbox)
+                            }
                         }
+                        Button(selection == .all ? "Deselect All" : "Select All") {
+                            selection = selection == .all ? [] : .all
+                        }
+                        .buttonStyle(.link)
+                        .font(.caption)
                     }
-                    .toggleStyle(.checkbox)
-                }
-            }
-            Button(selection == .all ? "Deselect All" : "Select All") {
-                selection = selection == .all ? [] : .all
-            }
-            .buttonStyle(.link)
-            .font(.caption)
+                    .font(.callout)
+                    .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .font(.callout)
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

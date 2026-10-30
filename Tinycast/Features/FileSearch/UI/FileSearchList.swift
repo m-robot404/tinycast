@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct FileSearchList: View {
 
@@ -17,33 +18,35 @@ struct FileSearchList: View {
     }
 
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(spacing: 0) {
-                    SectionHeader(title: title, isFirst: true)
-                    ForEach(results) { result in
-                        FileSearchRow(result: result, selected: result.id == selectedID)
-                            .selectionFrame(result.id == selectedID)
-                            .contentShape(Rectangle())
-                            .onRowClick(
-                                select: { onSelect(result) }, activate: { onActivate(result) },
-                                drag: result.rowDrag(dropped: onDropped)
-                            )
-                            .onRightClick { onActions(result) }
+        WithObservationTracking {
+            ScrollViewReader { proxy in
+                        ScrollView {
+                            LazyVStack(spacing: 0) {
+                                SectionHeader(title: title, isFirst: true)
+                                ForEach(results) { result in
+                                    FileSearchRow(result: result, selected: result.id == selectedID)
+                                        .selectionFrame(result.id == selectedID)
+                                        .contentShape(Rectangle())
+                                        .onRowClick(
+                                            select: { onSelect(result) }, activate: { onActivate(result) },
+                                            drag: result.rowDrag(dropped: onDropped)
+                                        )
+                                        .onRightClick { onActions(result) }
+                                }
+                            }
+                            .padding(.horizontal, metrics.spacing.md)
+                            .padding(.top, metrics.spacing.xs)
+                            .padding(.bottom, metrics.spacing.md)
+                            .hideNativeScrollers()
+                            .scrollOriginAnchor()
+                        }
+                        .edgeDissolve()
+                        .thinScrollbar()
+                        .scrollFollowsSelection(
+                            scroll, row: selectedID, atOrigin: firstRowSelected, proxy: proxy)
                     }
-                }
-                .padding(.horizontal, metrics.spacing.md)
-                .padding(.top, metrics.spacing.xs)
-                .padding(.bottom, metrics.spacing.md)
-                .hideNativeScrollers()
-                .scrollOriginAnchor()
-            }
-            .edgeDissolve()
-            .thinScrollbar()
-            .scrollFollowsSelection(
-                scroll, row: selectedID, atOrigin: firstRowSelected, proxy: proxy)
+                    .onDisappear { IconCache.purgeFitted() }
         }
-        .onDisappear { IconCache.purgeFitted() }
     }
 }
 
@@ -91,57 +94,59 @@ struct FileSearchRow: View {
     }
 
     var body: some View {
-        HStack(spacing: metrics.spacing.lg) {
-            Group {
-                if let image {
-                    Image(nsImage: image).resizable()
-                } else {
-                    RoundedRectangle(cornerRadius: metrics.radius.thumbnail, style: .continuous)
-                        .fill(Theme.Colors.iconPlaceholder)
-                }
-            }
-            .frame(width: metrics.size.resultRowIcon, height: metrics.size.resultRowIcon)
-            label
-                .font(metrics.typography.rowTitle)
-                .lineLimit(1)
-                .truncationMode(.middle)
-                .layoutPriority(1)
-            if showsLocation {
-                Text(result.parentPath)
-                    .font(metrics.typography.rowTrailing)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-            }
-            Spacer(minLength: 0)
-            if let slot, palette.commandHeld {
-                HStack(spacing: metrics.spacing.xxs) {
-                    KeyCapChip(text: "⌘", style: .outline)
-                    KeyCapChip(text: String(slot), style: .outline)
-                }
-            } else if showsLocation {
-                Text(result.isDirectory ? "Folder" : "File")
-                    .font(metrics.typography.rowTrailing)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(.horizontal, metrics.spacing.md)
-        .padding(.vertical, metrics.spacing.sm)
-        .background(
-            RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous)
-                .fill(fill)
-        )
-        .armedHover($hovered)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(result.name)
-        .accessibilityValue(result.parentPath)
-        .accessibilityAddTraits(selected ? .isSelected : [])
-        .task(id: IconRequest(result.id)) {
-            if let warm = IconCache.cachedFitted(forFile: result.id) {
-                image = warm
-                return
-            }
-            image = await IconCache.loadFittedAsync(forFile: result.id)
+        WithObservationTracking {
+            HStack(spacing: metrics.spacing.lg) {
+                        Group {
+                            if let image {
+                                Image(nsImage: image).resizable()
+                            } else {
+                                RoundedRectangle(cornerRadius: metrics.radius.thumbnail, style: .continuous)
+                                    .fill(Theme.Colors.iconPlaceholder)
+                            }
+                        }
+                        .frame(width: metrics.size.resultRowIcon, height: metrics.size.resultRowIcon)
+                        label
+                            .font(metrics.typography.rowTitle)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                            .layoutPriority(1)
+                        if showsLocation {
+                            Text(result.parentPath)
+                                .font(metrics.typography.rowTrailing)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                        }
+                        Spacer(minLength: 0)
+                        if let slot, palette.commandHeld {
+                            HStack(spacing: metrics.spacing.xxs) {
+                                KeyCapChip(text: "⌘", style: .outline)
+                                KeyCapChip(text: String(slot), style: .outline)
+                            }
+                        } else if showsLocation {
+                            Text(result.isDirectory ? "Folder" : "File")
+                                .font(metrics.typography.rowTrailing)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.horizontal, metrics.spacing.md)
+                    .padding(.vertical, metrics.spacing.sm)
+                    .background(
+                        RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous)
+                            .fill(fill)
+                    )
+                    .armedHover($hovered)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel(result.name)
+                    .accessibilityValue(result.parentPath)
+                    .accessibilityAddTraits(selected ? .isSelected : [])
+                    .task(id: IconRequest(result.id)) {
+                        if let warm = IconCache.cachedFitted(forFile: result.id) {
+                            image = warm
+                            return
+                        }
+                        image = await IconCache.loadFittedAsync(forFile: result.id)
+                    }
         }
     }
 }

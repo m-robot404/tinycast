@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 /// `Form.Dropdown` and `Form.TagPicker`: one control, typing and caret in the field itself.
 struct ExtensionPickerField: View {
@@ -74,63 +75,65 @@ struct ExtensionPickerField: View {
     }
 
     var body: some View {
-        control
-            .focusable()
-            .focused($focus, equals: index)
-            // The chrome draws the focused edge, so AppKit's blue ring would be a second one.
-            .focusEffectDisabled()
-            .extensionListPanel(
-                open: open, height: listHeight, revision: revision, flipped: $flipped
-            ) {
-                ExtensionPickerList(
-                    items: matches, selection: highlighted, chosen: Set(chosen),
-                    assetsPath: assetsPath, onSelect: { choose(at: $0) },
-                    onHighlight: { highlighted = $0 })
-            }
-            .onKeyPress(phases: [.down, .repeat]) { press in
-                guard !palette.menuOpen, !ExtensionFormKey.enterKeys.contains(press.key)
-                else { return .ignored }
-                switch ExtensionListKey(press: press, listOpen: open) {
-                case .openList: return openList()
-                case .moveUp: return move(-1)
-                case .moveDown: return move(1)
-                case .commit:
-                    choose(at: highlighted)
-                    return .handled
-                case .dismiss:
-                    close()
-                    return .handled
-                case .append(let characters):
-                    query += characters
-                    highlighted = 0
-                    return .handled
-                case .deleteBackward:
-                    guard !query.isEmpty else { return .handled }
-                    query.removeLast()
-                    highlighted = 0
-                    return .handled
-                case .stepValue(let delta): return step(delta)
-                case .ignored: return .ignored
-                }
-            }
-            .modifier(
-                ExtensionFormKeys(
-                    field: allowsMultipleSelection ? .tagPicker : .dropdown,
-                    onActivate: {
-                        if open { choose(at: highlighted) } else { _ = openList() }
-                    },
-                    onSubmit: {
-                        close(); onSubmit()
-                    })
-            )
-            .onChange(of: open) { palette.noteControlListOpen(open) }
-            .onChange(of: query) { typedAt = Date() }
-            .onScrollVisibilityChange { if !$0 { close() } }
-            .onChange(of: palette.controlListDismissToken) { close() }
-            .onDisappear { if open { palette.noteControlListOpen(false) } }
-            .onChange(of: focus) { _, focus in
-                if focus != index { close() }
-            }
+        WithObservationTracking {
+            control
+                        .focusable()
+                        .focused($focus, equals: index)
+                        // The chrome draws the focused edge, so AppKit's blue ring would be a second one.
+                        .focusEffectDisabled()
+                        .extensionListPanel(
+                            open: open, height: listHeight, revision: revision, flipped: $flipped
+                        ) {
+                            ExtensionPickerList(
+                                items: matches, selection: highlighted, chosen: Set(chosen),
+                                assetsPath: assetsPath, onSelect: { choose(at: $0) },
+                                onHighlight: { highlighted = $0 })
+                        }
+                        .onKeyPress(phases: [.down, .repeat]) { press in
+                            guard !palette.menuOpen, !ExtensionFormKey.enterKeys.contains(press.key)
+                            else { return .ignored }
+                            switch ExtensionListKey(press: press, listOpen: open) {
+                            case .openList: return openList()
+                            case .moveUp: return move(-1)
+                            case .moveDown: return move(1)
+                            case .commit:
+                                choose(at: highlighted)
+                                return .handled
+                            case .dismiss:
+                                close()
+                                return .handled
+                            case .append(let characters):
+                                query += characters
+                                highlighted = 0
+                                return .handled
+                            case .deleteBackward:
+                                guard !query.isEmpty else { return .handled }
+                                query.removeLast()
+                                highlighted = 0
+                                return .handled
+                            case .stepValue(let delta): return step(delta)
+                            case .ignored: return .ignored
+                            }
+                        }
+                        .modifier(
+                            ExtensionFormKeys(
+                                field: allowsMultipleSelection ? .tagPicker : .dropdown,
+                                onActivate: {
+                                    if open { choose(at: highlighted) } else { _ = openList() }
+                                },
+                                onSubmit: {
+                                    close(); onSubmit()
+                                })
+                        )
+                        .onChange(of: open) { palette.noteControlListOpen(open) }
+                        .onChange(of: query) { typedAt = Date() }
+                        .onScrollVisibilityChange { if !$0 { close() } }
+                        .onChange(of: palette.controlListDismissToken) { close() }
+                        .onDisappear { if open { palette.noteControlListOpen(false) } }
+                        .onChange(of: focus) { _, focus in
+                            if focus != index { close() }
+                        }
+        }
     }
 
     private var control: some View {

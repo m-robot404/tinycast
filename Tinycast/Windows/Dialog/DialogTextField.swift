@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 extension View {
     func dialogTextField() -> some View {

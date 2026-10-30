@@ -1,4 +1,5 @@
 import Foundation
+import ObservationPolyfill
 import Observation
 
 /// Owns the app-server, reusing the account already configured in the user's Codex installation.

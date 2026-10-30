@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 import SwiftUI
 
 /// Chat actions for both surfaces, plus the AI Chat window's own; views route every mutation here.

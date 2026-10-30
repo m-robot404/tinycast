@@ -1,4 +1,5 @@
 import Foundation
+import ObservationPolyfill
 
 /// Publishes the current minute, and only while something is watching.
 @MainActor

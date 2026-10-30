@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct CustomQuickActionEditRequest: Identifiable {
     let id = UUID()
@@ -38,48 +39,50 @@ struct CustomQuickActionEditorPanel: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
-            SettingsEditorHeader(
-                title: existing == nil ? "New Quick Action" : "Edit \(existing?.name ?? "")",
-                subtitle: "Tinycast sends your selected text to the model with these instructions."
-            )
+        WithObservationTracking {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
+                        SettingsEditorHeader(
+                            title: existing == nil ? "New Quick Action" : "Edit \(existing?.name ?? "")",
+                            subtitle: "Tinycast sends your selected text to the model with these instructions."
+                        )
 
-            HStack(alignment: .bottom, spacing: Theme.Spacing.lg) {
-                nameField
-                iconField
-            }
+                        HStack(alignment: .bottom, spacing: Theme.Spacing.lg) {
+                            nameField
+                            iconField
+                        }
 
-            instructionsField
+                        instructionsField
 
-            QuickActionModelPicker(selection: $model)
+                        QuickActionModelPicker(selection: $model)
 
-            if let failure {
-                Text(failure)
-                    .font(.callout)
-                    .foregroundStyle(Theme.Colors.destructive)
-            }
+                        if let failure {
+                            Text(failure)
+                                .font(.callout)
+                                .foregroundStyle(Theme.Colors.destructive)
+                        }
 
-            HStack(spacing: Theme.Spacing.md) {
-                if let existing {
-                    Button("Delete", role: .destructive) {
-                        dismiss()
-                        Task { await core.quickActionCoordinator.deleteCustomQuickAction(id: existing.id) }
+                        HStack(spacing: Theme.Spacing.md) {
+                            if let existing {
+                                Button("Delete", role: .destructive) {
+                                    dismiss()
+                                    Task { await core.quickActionCoordinator.deleteCustomQuickAction(id: existing.id) }
+                                }
+                                .buttonStyle(.modalAction(.destructive, fillsWidth: false))
+                            }
+                            Spacer()
+                            Button("Cancel") { dismiss() }
+                                .buttonStyle(.modalAction(.cancel))
+                                .keyboardShortcut(.cancelAction)
+                            Button("Save", action: save)
+                                .buttonStyle(.modalAction(.primary))
+                                .keyboardShortcut(.defaultAction)
+                                .disabled(!canSave)
+                        }
                     }
-                    .buttonStyle(.modalAction(.destructive, fillsWidth: false))
-                }
-                Spacer()
-                Button("Cancel") { dismiss() }
-                    .buttonStyle(.modalAction(.cancel))
-                    .keyboardShortcut(.cancelAction)
-                Button("Save", action: save)
-                    .buttonStyle(.modalAction(.primary))
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(!canSave)
-            }
+                    .padding(Theme.Spacing.dialogInset)
+                    .frame(width: Theme.Size.editorSheetWidth)
+                    .settingsEditorPanelSurface()
         }
-        .padding(Theme.Spacing.dialogInset)
-        .frame(width: Theme.Size.editorSheetWidth)
-        .settingsEditorPanelSurface()
     }
 
     private var nameField: some View {

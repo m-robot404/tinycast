@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct ChatSuggestionChips: View {
     @Environment(\.metrics) private var metrics
@@ -6,13 +7,15 @@ struct ChatSuggestionChips: View {
     let onChoose: (String) -> Void
 
     var body: some View {
-        ChatFlowLayout(spacing: metrics.spacing.sm) {
-            ForEach(Array(choices.enumerated()), id: \.offset) { _, choice in
-                ChatSuggestionChip(choice: choice, onChoose: onChoose)
-            }
+        WithObservationTracking {
+            ChatFlowLayout(spacing: metrics.spacing.sm) {
+                        ForEach(Array(choices.enumerated()), id: \.offset) { _, choice in
+                            ChatSuggestionChip(choice: choice, onChoose: onChoose)
+                        }
+                    }
+                    .accessibilityElement(children: .contain)
+                    .accessibilityLabel("Suggested replies")
         }
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Suggested replies")
     }
 }
 
@@ -22,23 +25,25 @@ private struct ChatSuggestionChip: View {
     let onChoose: (String) -> Void
 
     var body: some View {
-        Button {
-            onChoose(choice)
-        } label: {
-            HStack(spacing: metrics.spacing.sm) {
-                Image(systemName: "arrow.turn.down.right")
-                    .font(metrics.typography.keyCap)
-                    .foregroundStyle(Theme.Colors.textTertiary)
-                Text(choice)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-            }
-            .font(metrics.typography.rowTrailing)
-            .chatChip()
+        WithObservationTracking {
+            Button {
+                        onChoose(choice)
+                    } label: {
+                        HStack(spacing: metrics.spacing.sm) {
+                            Image(systemName: "arrow.turn.down.right")
+                                .font(metrics.typography.keyCap)
+                                .foregroundStyle(Theme.Colors.textTertiary)
+                            Text(choice)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                        }
+                        .font(metrics.typography.rowTrailing)
+                        .chatChip()
+                    }
+                    .buttonStyle(.plain)
+                    .help("Reply “\(choice)”")
+                    .accessibilityLabel("Reply: \(choice)")
         }
-        .buttonStyle(.plain)
-        .help("Reply “\(choice)”")
-        .accessibilityLabel("Reply: \(choice)")
     }
 }
 

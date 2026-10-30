@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 import SwiftUI
 
 /// A child window, so the menu can outgrow a short note window; it never takes key from the editor.

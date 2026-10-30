@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 
 /// Owns the Apple Shortcuts flow: discovery into the launcher slice, and the one run funnel.
 @MainActor

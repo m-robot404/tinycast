@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct QuicklinksSettingsView: View {
     @Environment(QuicklinkStore.self) private var store
@@ -7,28 +8,30 @@ struct QuicklinksSettingsView: View {
     @State private var query = ""
 
     var body: some View {
-        @Bindable var settings = settings
-        return Form {
-            FeatureSwitchSection(
-                anchor: .quicklinksQuicklinks,
-                enableTitle: "Enable quicklinks",
-                enableSubtitle: "Open saved links and searches from the launcher.",
-                isEnabled: $settings.quicklinksEnabled,
-                showsInLauncher: $settings.quicklinksShowInLauncher,
-                showsIcon: true,
-                showsHeader: false)
+        WithObservationTracking {
+            @Bindable var settings = settings
+                    return Form {
+                        FeatureSwitchSection(
+                            anchor: .quicklinksQuicklinks,
+                            enableTitle: "Enable quicklinks",
+                            enableSubtitle: "Open saved links and searches from the launcher.",
+                            isEnabled: $settings.quicklinksEnabled,
+                            showsInLauncher: $settings.quicklinksShowInLauncher,
+                            showsIcon: true,
+                            showsHeader: false)
 
-            Group {
-                if !store.isAvailable { storageNotice }
-                FeatureCommandsSection(owner: .quicklinks, anchor: .quicklinksCommands)
-                library
-                behaviour
-                transfer
-            }
-            .settingsEnabled(settings.quicklinksEnabled)
+                        Group {
+                            if !store.isAvailable { storageNotice }
+                            FeatureCommandsSection(owner: .quicklinks, anchor: .quicklinksCommands)
+                            library
+                            behaviour
+                            transfer
+                        }
+                        .settingsEnabled(settings.quicklinksEnabled)
+                    }
+                    .formStyle(.grouped)
+                    .settingsScrollTarget(.quicklinks)
         }
-        .formStyle(.grouped)
-        .settingsScrollTarget(.quicklinks)
     }
 
     // MARK: - Sections
@@ -137,52 +140,54 @@ private struct QuicklinkSettingsRow: View {
     let onDelete: () -> Void
 
     var body: some View {
-        SettingsRow(title: quicklink.name, subtitle: quicklink.link) {
-            SymbolImage(
-                name: quicklink.symbol,
-                size: Theme.Size.settingsRowIcon - Theme.Spacing.xs
-            )
-            .frame(width: SettingsListMetrics.iconSize, height: SettingsListMetrics.iconSize)
-        } trailing: {
-            if quicklink.isPinned {
-                Image(systemName: "pin.fill")
-                    .foregroundStyle(.secondary)
-                    .help("Pinned to the top")
-            }
-            if !quicklink.showsInRootSearch {
-                Image(systemName: "eye.slash")
-                    .foregroundStyle(.secondary)
-                    .help("Hidden from root search")
-            }
+        WithObservationTracking {
+            SettingsRow(title: quicklink.name, subtitle: quicklink.link) {
+                        SymbolImage(
+                            name: quicklink.symbol,
+                            size: Theme.Size.settingsRowIcon - Theme.Spacing.xs
+                        )
+                        .frame(width: SettingsListMetrics.iconSize, height: SettingsListMetrics.iconSize)
+                    } trailing: {
+                        if quicklink.isPinned {
+                            Image(systemName: "pin.fill")
+                                .foregroundStyle(.secondary)
+                                .help("Pinned to the top")
+                        }
+                        if !quicklink.showsInRootSearch {
+                            Image(systemName: "eye.slash")
+                                .foregroundStyle(.secondary)
+                                .help("Hidden from root search")
+                        }
 
-            // An alias only reaches the ranker through the root-search slice, so it dims with it.
-            AliasField(key: quicklink.entryID, name: quicklink.name)
-                .settingsEnabled(quicklink.isEnabled && quicklink.showsInRootSearch)
+                        // An alias only reaches the ranker through the root-search slice, so it dims with it.
+                        AliasField(key: quicklink.entryID, name: quicklink.name)
+                            .settingsEnabled(quicklink.isEnabled && quicklink.showsInRootSearch)
 
-            // A disabled quicklink's shortcut fires into the funnel's refusal, so it dims too.
-            ShortcutRecorder(action: .quicklink(id: quicklink.id))
-                .settingsEnabled(quicklink.isEnabled)
+                        // A disabled quicklink's shortcut fires into the funnel's refusal, so it dims too.
+                        ShortcutRecorder(action: .quicklink(id: quicklink.id))
+                            .settingsEnabled(quicklink.isEnabled)
 
-            Button(action: onEdit) {
-                Image(systemName: "pencil")
-            }
-            .buttonStyle(.plain)
-            .help("Edit Quicklink")
-            .accessibilityLabel("Edit \(quicklink.name)")
+                        Button(action: onEdit) {
+                            Image(systemName: "pencil")
+                        }
+                        .buttonStyle(.plain)
+                        .help("Edit Quicklink")
+                        .accessibilityLabel("Edit \(quicklink.name)")
 
-            Button(action: onDelete) {
-                Image(systemName: "trash")
-                    .foregroundStyle(.red)
-            }
-            .buttonStyle(.plain)
-            .help("Delete Quicklink")
-            .accessibilityLabel("Delete \(quicklink.name)")
+                        Button(action: onDelete) {
+                            Image(systemName: "trash")
+                                .foregroundStyle(.red)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Delete Quicklink")
+                        .accessibilityLabel("Delete \(quicklink.name)")
 
-            Toggle("", isOn: $isEnabled)
-                .labelsHidden()
-                .toggleStyle(.checkbox)
-                .help("Enabled")
-                .accessibilityLabel("Enable \(quicklink.name)")
+                        Toggle("", isOn: $isEnabled)
+                            .labelsHidden()
+                            .toggleStyle(.checkbox)
+                            .help("Enabled")
+                            .accessibilityLabel("Enable \(quicklink.name)")
+                    }
         }
     }
 }

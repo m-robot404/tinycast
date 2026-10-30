@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct LauncherList: View {
 
@@ -154,83 +155,85 @@ struct LauncherList: View {
     }
 
     var body: some View {
-        let rows = rows
-        return Group {
-            if results.isEmpty && favorites.isEmpty && card == nil && files == nil && fallbacks == nil {
-                EmptyResults(text: String(localized: "No apps found"))
-            } else {
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        LazyVStack(spacing: 0) {
-                            ForEach(rows) { row in
-                                switch row {
-                                case .header(let title):
-                                    SectionHeader(title: title, isFirst: row.id == rows.first?.id)
-                                case .fallbackHeader(let title):
-                                    SectionHeader(
-                                        title: title, isFirst: row.id == rows.first?.id,
-                                        configure: fallbacks?.onConfigure,
-                                        configureHelp: String(localized: "Configure Fallbacks…"))
-                                case .card(let card):
-                                    LeadCardView(card: card, selected: cardSelected)
-                                        .contentShape(Rectangle())
-                                        .onTapGesture(perform: onActivateCard)
-                                        .onRightClick(perform: onCardActions)
-                                        .padding(.bottom, metrics.spacing.xs)
-                                        .selectionFrame(cardSelected)
-                                case .app(let app):
-                                    AppRow(
-                                        app: app,
-                                        selected: app.id == selectedRowID,
-                                        running: runningApps.isRunning(app),
-                                        slot: nil
-                                    )
-                                    .contentShape(Rectangle())
-                                    .onRowTap(drag: drag(for: app)) { onActivate(app) }
-                                    .onRightClick { onActions(app) }
-                                    .selectionFrame(app.id == selectedRowID)
-                                case .favorite(let favorite, let index):
-                                    favoriteRow(favorite, index: index)
-                                        .contentShape(Rectangle())
-                                        .onRowTap(drag: drag(for: favorite)) { onActivateFavorite(index) }
-                                        .onRightClick { onFavoriteActions(index) }
-                                        .selectionFrame(favorite.id == selectedRowID)
-                                case .file(let result, let index):
-                                    FileSearchRow(
-                                        result: result, selected: row.id == selectedRowID,
-                                        showsLocation: true
-                                    )
-                                    .contentShape(Rectangle())
-                                    .onRowTap(drag: result.rowDrag(dropped: onDropped)) {
-                                        files?.onActivate(index)
+        WithObservationTracking {
+            let rows = rows
+                    return Group {
+                        if results.isEmpty && favorites.isEmpty && card == nil && files == nil && fallbacks == nil {
+                            EmptyResults(text: String(localized: "No apps found"))
+                        } else {
+                            ScrollViewReader { proxy in
+                                ScrollView {
+                                    LazyVStack(spacing: 0) {
+                                        ForEach(rows) { row in
+                                            switch row {
+                                            case .header(let title):
+                                                SectionHeader(title: title, isFirst: row.id == rows.first?.id)
+                                            case .fallbackHeader(let title):
+                                                SectionHeader(
+                                                    title: title, isFirst: row.id == rows.first?.id,
+                                                    configure: fallbacks?.onConfigure,
+                                                    configureHelp: String(localized: "Configure Fallbacks…"))
+                                            case .card(let card):
+                                                LeadCardView(card: card, selected: cardSelected)
+                                                    .contentShape(Rectangle())
+                                                    .onTapGesture(perform: onActivateCard)
+                                                    .onRightClick(perform: onCardActions)
+                                                    .padding(.bottom, metrics.spacing.xs)
+                                                    .selectionFrame(cardSelected)
+                                            case .app(let app):
+                                                AppRow(
+                                                    app: app,
+                                                    selected: app.id == selectedRowID,
+                                                    running: runningApps.isRunning(app),
+                                                    slot: nil
+                                                )
+                                                .contentShape(Rectangle())
+                                                .onRowTap(drag: drag(for: app)) { onActivate(app) }
+                                                .onRightClick { onActions(app) }
+                                                .selectionFrame(app.id == selectedRowID)
+                                            case .favorite(let favorite, let index):
+                                                favoriteRow(favorite, index: index)
+                                                    .contentShape(Rectangle())
+                                                    .onRowTap(drag: drag(for: favorite)) { onActivateFavorite(index) }
+                                                    .onRightClick { onFavoriteActions(index) }
+                                                    .selectionFrame(favorite.id == selectedRowID)
+                                            case .file(let result, let index):
+                                                FileSearchRow(
+                                                    result: result, selected: row.id == selectedRowID,
+                                                    showsLocation: true
+                                                )
+                                                .contentShape(Rectangle())
+                                                .onRowTap(drag: result.rowDrag(dropped: onDropped)) {
+                                                    files?.onActivate(index)
+                                                }
+                                                .onRightClick { files?.onActions(index) }
+                                                .selectionFrame(row.id == selectedRowID)
+                                            case .fallback(let app, let index):
+                                                AppRow(
+                                                    app: app, selected: row.id == selectedRowID, running: false,
+                                                    slot: nil
+                                                )
+                                                .contentShape(Rectangle())
+                                                .onTapGesture { fallbacks?.onActivate(index) }
+                                                .onRightClick { fallbacks?.onActions(index) }
+                                                .selectionFrame(row.id == selectedRowID)
+                                            }
+                                        }
                                     }
-                                    .onRightClick { files?.onActions(index) }
-                                    .selectionFrame(row.id == selectedRowID)
-                                case .fallback(let app, let index):
-                                    AppRow(
-                                        app: app, selected: row.id == selectedRowID, running: false,
-                                        slot: nil
-                                    )
-                                    .contentShape(Rectangle())
-                                    .onTapGesture { fallbacks?.onActivate(index) }
-                                    .onRightClick { fallbacks?.onActions(index) }
-                                    .selectionFrame(row.id == selectedRowID)
+                                    .padding(.horizontal, metrics.spacing.md)
+                                    .padding(.top, metrics.spacing.xs)
+                                    .padding(.bottom, metrics.spacing.md)
+                                    .hideNativeScrollers()
+                                    .scrollOriginAnchor()
                                 }
+                                .edgeDissolve()
+                                .thinScrollbar()
+                                // Snap to the origin on the first row so its header shows too.
+                                .scrollFollowsSelection(
+                                    scroll, row: selectedRowID, atOrigin: firstRowSelected, proxy: proxy)
                             }
                         }
-                        .padding(.horizontal, metrics.spacing.md)
-                        .padding(.top, metrics.spacing.xs)
-                        .padding(.bottom, metrics.spacing.md)
-                        .hideNativeScrollers()
-                        .scrollOriginAnchor()
                     }
-                    .edgeDissolve()
-                    .thinScrollbar()
-                    // Snap to the origin on the first row so its header shows too.
-                    .scrollFollowsSelection(
-                        scroll, row: selectedRowID, atOrigin: firstRowSelected, proxy: proxy)
-                }
-            }
         }
     }
 
@@ -271,13 +274,15 @@ private struct LeadCardView: View {
     let selected: Bool
 
     var body: some View {
-        switch card {
-        case .calc(let result):
-            CalculatorCard(result: result, selected: selected)
-        case .meeting(let meeting, let now):
-            MeetingCard(meeting: meeting, now: now, selected: selected)
-        case .color(let color):
-            ColorCard(color: color, selected: selected)
+        WithObservationTracking {
+            switch card {
+                    case .calc(let result):
+                        CalculatorCard(result: result, selected: selected)
+                    case .meeting(let meeting, let now):
+                        MeetingCard(meeting: meeting, now: now, selected: selected)
+                    case .color(let color):
+                        ColorCard(color: color, selected: selected)
+                    }
         }
     }
 }
@@ -311,73 +316,75 @@ private struct AppRow: View {
     }
 
     var body: some View {
-        HStack(spacing: metrics.spacing.lg) {
-            AppIconView(app: app, pointSize: metrics.size.resultRowIcon)
-                .frame(width: metrics.size.resultRowIcon, height: metrics.size.resultRowIcon)
-                .overlay(alignment: .bottom) {
-                    if running {
-                        Circle()
-                            .fill(.secondary)
-                            .frame(width: 3, height: 3)
-                            .offset(y: 3)
+        WithObservationTracking {
+            HStack(spacing: metrics.spacing.lg) {
+                        AppIconView(app: app, pointSize: metrics.size.resultRowIcon)
+                            .frame(width: metrics.size.resultRowIcon, height: metrics.size.resultRowIcon)
+                            .overlay(alignment: .bottom) {
+                                if running {
+                                    Circle()
+                                        .fill(.secondary)
+                                        .frame(width: 3, height: 3)
+                                        .offset(y: 3)
+                                }
+                            }
+                        if app.kind == .meeting {
+                            MeetingEntryContent(entryID: app.id) { meeting, _ in
+                                CalendarBar(color: meeting.calendarColor)
+                            }
+                        }
+                        Text(app.name)
+                            .font(metrics.typography.rowTitle)
+                            .lineLimit(1)
+                        if let subtitle = app.subtitle {
+                            Text(subtitle)
+                                .font(metrics.typography.rowTrailing)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                        if let alias = aliases.alias(for: app.preferenceKey) {
+                            Text(alias)
+                                .font(metrics.typography.rowTrailing)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .padding(.horizontal, metrics.spacing.sm)
+                                .padding(.vertical, metrics.spacing.xxs)
+                                .background(
+                                    RoundedRectangle(cornerRadius: metrics.radius.menu, style: .continuous)
+                                        .fill(Theme.Colors.controlSurface))
+                        }
+                        if let caps = shortcutCaps {
+                            HStack(spacing: metrics.spacing.xxs) {
+                                ForEach(Array(caps.enumerated()), id: \.offset) { _, cap in
+                                    KeyCapChip(text: cap, style: .outline)
+                                }
+                            }
+                        }
+                        Spacer()
+                        if let refresh = app.backgroundRefresh {
+                            ExtensionRefreshIndicator(state: refresh)
+                                .font(metrics.typography.rowTrailing)
+                        }
+                        if let slot, palette.commandHeld {
+                            HStack(spacing: metrics.spacing.xxs) {
+                                KeyCapChip(text: "⌘", style: .outline)
+                                KeyCapChip(text: String(slot), style: .outline)
+                            }
+                        } else if app.kind == .meeting {
+                            MeetingEntryContent(entryID: app.id) { MeetingTiming(meeting: $0, now: $1) }
+                        } else {
+                            Text(app.kindLabel)
+                                .font(metrics.typography.rowTrailing)
+                                .foregroundStyle(.secondary)
+                        }
                     }
-                }
-            if app.kind == .meeting {
-                MeetingEntryContent(entryID: app.id) { meeting, _ in
-                    CalendarBar(color: meeting.calendarColor)
-                }
-            }
-            Text(app.name)
-                .font(metrics.typography.rowTitle)
-                .lineLimit(1)
-            if let subtitle = app.subtitle {
-                Text(subtitle)
-                    .font(metrics.typography.rowTrailing)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-            if let alias = aliases.alias(for: app.preferenceKey) {
-                Text(alias)
-                    .font(metrics.typography.rowTrailing)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .padding(.horizontal, metrics.spacing.sm)
-                    .padding(.vertical, metrics.spacing.xxs)
+                    .padding(.horizontal, metrics.spacing.md)
+                    .padding(.vertical, metrics.spacing.sm)
                     .background(
-                        RoundedRectangle(cornerRadius: metrics.radius.menu, style: .continuous)
-                            .fill(Theme.Colors.controlSurface))
-            }
-            if let caps = shortcutCaps {
-                HStack(spacing: metrics.spacing.xxs) {
-                    ForEach(Array(caps.enumerated()), id: \.offset) { _, cap in
-                        KeyCapChip(text: cap, style: .outline)
-                    }
-                }
-            }
-            Spacer()
-            if let refresh = app.backgroundRefresh {
-                ExtensionRefreshIndicator(state: refresh)
-                    .font(metrics.typography.rowTrailing)
-            }
-            if let slot, palette.commandHeld {
-                HStack(spacing: metrics.spacing.xxs) {
-                    KeyCapChip(text: "⌘", style: .outline)
-                    KeyCapChip(text: String(slot), style: .outline)
-                }
-            } else if app.kind == .meeting {
-                MeetingEntryContent(entryID: app.id) { MeetingTiming(meeting: $0, now: $1) }
-            } else {
-                Text(app.kindLabel)
-                    .font(metrics.typography.rowTrailing)
-                    .foregroundStyle(.secondary)
-            }
+                        RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous)
+                            .fill(fill)
+                    )
+                    .armedHover($hovered)
         }
-        .padding(.horizontal, metrics.spacing.md)
-        .padding(.vertical, metrics.spacing.sm)
-        .background(
-            RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous)
-                .fill(fill)
-        )
-        .armedHover($hovered)
     }
 }

@@ -1,4 +1,5 @@
 import Foundation
+import ObservationPolyfill
 
 /// Every command's row metadata in one small file, deliberately not in `extension-data`: drawing a
 /// launcher row must never fault in an extension's whole `LocalStorage` and `Cache`.

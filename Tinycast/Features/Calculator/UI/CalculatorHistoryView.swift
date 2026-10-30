@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 /// Past calculations, shaped like `ClipboardList`; both sides per row, so no preview pane.
 struct CalculatorHistoryList: View {
@@ -56,47 +57,49 @@ struct CalculatorHistoryList: View {
     }
 
     var body: some View {
-        let rows = rows
-        return ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(spacing: 0) {
-                    ForEach(rows) { row in
-                        switch row {
-                        case .header(let title):
-                            SectionHeader(title: title, isFirst: row.id == rows.first?.id)
-                        case .calc(let result):
-                            CalculatorCard(result: result, selected: calcSelected)
-                                .contentShape(Rectangle())
-                                .onTapGesture(perform: onActivateCalc)
-                                .onRightClick(perform: onCalcActions)
-                                .padding(.bottom, metrics.spacing.xs)
-                                .selectionFrame(calcSelected)
-                        case .entry(let entry):
-                            CalcHistoryRow(entry: entry, selected: entry.id == selectedID)
-                                .selectionFrame(entry.id == selectedID)
-                                .contentShape(Rectangle())
-                                .onTapGesture { onSelect(entry) }
-                                .simultaneousGesture(
-                                    TapGesture(count: 2).onEnded {
-                                        onSelect(entry)
-                                        onActivate()
+        WithObservationTracking {
+            let rows = rows
+                    return ScrollViewReader { proxy in
+                        ScrollView {
+                            LazyVStack(spacing: 0) {
+                                ForEach(rows) { row in
+                                    switch row {
+                                    case .header(let title):
+                                        SectionHeader(title: title, isFirst: row.id == rows.first?.id)
+                                    case .calc(let result):
+                                        CalculatorCard(result: result, selected: calcSelected)
+                                            .contentShape(Rectangle())
+                                            .onTapGesture(perform: onActivateCalc)
+                                            .onRightClick(perform: onCalcActions)
+                                            .padding(.bottom, metrics.spacing.xs)
+                                            .selectionFrame(calcSelected)
+                                    case .entry(let entry):
+                                        CalcHistoryRow(entry: entry, selected: entry.id == selectedID)
+                                            .selectionFrame(entry.id == selectedID)
+                                            .contentShape(Rectangle())
+                                            .onTapGesture { onSelect(entry) }
+                                            .simultaneousGesture(
+                                                TapGesture(count: 2).onEnded {
+                                                    onSelect(entry)
+                                                    onActivate()
+                                                }
+                                            )
+                                            .onRightClick { onActions(entry) }
                                     }
-                                )
-                                .onRightClick { onActions(entry) }
+                                }
+                            }
+                            .padding(.horizontal, metrics.spacing.md)
+                            .padding(.top, metrics.spacing.xs)
+                            .padding(.bottom, metrics.spacing.md)
+                            .hideNativeScrollers()
+                            .scrollOriginAnchor()
                         }
+                        .edgeDissolve()
+                        .thinScrollbar()
+                        // Snap to the origin on the first row so its section header shows too.
+                        .scrollFollowsSelection(
+                            scroll, row: selectedRowID, atOrigin: firstRowSelected, proxy: proxy)
                     }
-                }
-                .padding(.horizontal, metrics.spacing.md)
-                .padding(.top, metrics.spacing.xs)
-                .padding(.bottom, metrics.spacing.md)
-                .hideNativeScrollers()
-                .scrollOriginAnchor()
-            }
-            .edgeDissolve()
-            .thinScrollbar()
-            // Snap to the origin on the first row so its section header shows too.
-            .scrollFollowsSelection(
-                scroll, row: selectedRowID, atOrigin: firstRowSelected, proxy: proxy)
         }
     }
 }
@@ -118,26 +121,28 @@ private struct CalcHistoryRow: View {
     }
 
     var body: some View {
-        IconCache.observeStyle()
-        return HStack(spacing: metrics.spacing.lg) {
-            Image(nsImage: IconCache.symbolIcon(named: "plus.forwardslash.minus")).resizable()
-                .frame(width: metrics.size.resultRowIcon, height: metrics.size.resultRowIcon)
-            Text(format.localizedExpression(entry.expression))
-                .font(metrics.typography.rowTitle)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .truncationMode(.tail)
-            Spacer(minLength: metrics.spacing.xl)
-            Text(format.localized(entry.result))
-                .font(metrics.typography.rowTitle.weight(.semibold))
-                .lineLimit(1)
+        WithObservationTracking {
+            IconCache.observeStyle()
+                    return HStack(spacing: metrics.spacing.lg) {
+                        Image(nsImage: IconCache.symbolIcon(named: "plus.forwardslash.minus")).resizable()
+                            .frame(width: metrics.size.resultRowIcon, height: metrics.size.resultRowIcon)
+                        Text(format.localizedExpression(entry.expression))
+                            .font(metrics.typography.rowTitle)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                        Spacer(minLength: metrics.spacing.xl)
+                        Text(format.localized(entry.result))
+                            .font(metrics.typography.rowTitle.weight(.semibold))
+                            .lineLimit(1)
+                    }
+                    .padding(.horizontal, metrics.spacing.md)
+                    .padding(.vertical, metrics.spacing.sm)
+                    .background(
+                        RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous)
+                            .fill(fill)
+                    )
+                    .armedHover($hovered)
         }
-        .padding(.horizontal, metrics.spacing.md)
-        .padding(.vertical, metrics.spacing.sm)
-        .background(
-            RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous)
-                .fill(fill)
-        )
-        .armedHover($hovered)
     }
 }

@@ -599,6 +599,7 @@
 		AE2C029C93F7A7F6F41CA574 /* CustomWindowSizeCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E73A01A5FEA2B4CA68AE6A6 /* CustomWindowSizeCoordinator.swift */; };
 		AE3144FCC55FADC48955D17A /* KeyShortcut.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E16AEF81320A101E384098E /* KeyShortcut.swift */; };
 		AEF27CACA736D81B31C5E6BE /* DictionaryScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1447366E9AD0C934A7050EB4 /* DictionaryScreen.swift */; };
+		AF04BEDD1792ACA87B06E32B /* ObservationPolyfill in Frameworks */ = {isa = PBXBuildFile; productRef = AC74D2F49FCFBD28DB5B96F8 /* ObservationPolyfill */; };
 		AF5FB32136A3DC18EC4E5E4C /* CalcOperator.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA97F3257C2FA99BF185ED8A /* CalcOperator.swift */; };
 		AFAC33BF93E5B61AEB1A2B6A /* AIProviderFailure.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7EEF9AED57F98541C007B888 /* AIProviderFailure.swift */; };
 		B073D5A79D50982E89C30F20 /* Snippet.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7B3FC48B58E1005453E7E18 /* Snippet.swift */; };
@@ -1759,6 +1760,17 @@
 		FE72CE02F853ACE956627347 /* SystemAction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SystemAction.swift; sourceTree = "<group>"; };
 		FF447647B325A119F2B3BCD1 /* UnitCategory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnitCategory.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		5DD96C5B911AE4FC9AAD9EE8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AF04BEDD1792ACA87B06E32B /* ObservationPolyfill in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		005F026A8F7D5E209B1CE917 /* Clipboard */ = {
@@ -3892,8 +3904,10 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 46034AD14BC918424C2FADC2 /* Build configuration list for PBXNativeTarget "Tinycast" */;
 			buildPhases = (
+				4864D92B26EB942ADE00DCFD /* Prepare macOS 13 Observation backport */,
 				6E13E657DC484EA7935E1C3A /* Sources */,
 				0E8F5C3C217EFF5576B2CB4F /* Resources */,
+				5DD96C5B911AE4FC9AAD9EE8 /* Frameworks */,
 				4AAF1BA4D980892A8FDF2D3E /* Embed Dependencies */,
 			);
 			buildRules = (
@@ -3905,6 +3919,7 @@
 			);
 			name = Tinycast;
 			packageProductDependencies = (
+				AC74D2F49FCFBD28DB5B96F8 /* ObservationPolyfill */,
 			);
 			productName = Tinycast;
 			productReference = 5392500F86E23C099D33561D /* Tinycast.app */;
@@ -3954,6 +3969,9 @@
 			);
 			mainGroup = FB9897CCA50570B3E7630145;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				BF64A60D8EB4B9BA4EFE2743 /* XCRemoteSwiftPackageReference "swift-observation-polyfill" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 114270CAA80F01D311693B63 /* Products */;
 			projectDirPath = "";
@@ -3983,6 +4001,28 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		4864D92B26EB942ADE00DCFD /* Prepare macOS 13 Observation backport */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Prepare macOS 13 Observation backport";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if [[ \"${MACOSX_DEPLOYMENT_TARGET:-}\" == \"13.0\" ]]; then\n  python3 \"${SRCROOT}/Scripts/prepare-ventura13.py\"\nfi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		385BC383D52E5167B280638A /* Sources */ = {
@@ -5223,6 +5263,25 @@
 			defaultConfigurationName = Debug;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		BF64A60D8EB4B9BA4EFE2743 /* XCRemoteSwiftPackageReference "swift-observation-polyfill" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/moreswift/swift-observation-polyfill";
+			requirement = {
+				kind = revision;
+				revision = d8843fa6dbf970aab42faaf101c9ce1cfd16fb94;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		AC74D2F49FCFBD28DB5B96F8 /* ObservationPolyfill */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = BF64A60D8EB4B9BA4EFE2743 /* XCRemoteSwiftPackageReference "swift-observation-polyfill" */;
+			productName = ObservationPolyfill;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = ADDC0DAB183B80B8B278C7BA /* Project object */;
 }

@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 private struct ArmedHover: ViewModifier {
     @Environment(PaletteState.self) private var palette

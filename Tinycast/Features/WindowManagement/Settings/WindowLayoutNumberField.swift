@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 import SwiftUI
 
 /// A suffixed numeric field. Commits every valid keystroke, clamps on ↵ or focus loss.
@@ -28,30 +29,32 @@ struct WindowLayoutNumberField: View {
     }
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.sm) {
-            Text(label)
-                .font(Theme.Typography.keyCap)
-                .foregroundStyle(Theme.Colors.textTertiary)
-            TextField("", text: $text)
-                .textFieldStyle(.plain)
-                .monospacedDigit()
-                .focused($isFocused)
-                .focusEffectDisabled()
-                .onSubmit(commit)
-                .onExitCommand(perform: revert)
-                .onChange(of: text) { _, typed in commitIfValid(typed) }
-                .onChange(of: isFocused) { _, focused in if !focused { commit() } }
-                .onChange(of: value) { _, new in if number(text) != new { text = String(new) } }
-            Divider()
-                .frame(height: Theme.Spacing.xl)
-            Text(suffix)
-                .font(Theme.Typography.keyCap)
-                .foregroundStyle(Theme.Colors.textSecondary)
-                .frame(width: Theme.Size.layoutFieldUnit, alignment: .leading)
+        WithObservationTracking {
+            HStack(spacing: Theme.Spacing.sm) {
+                        Text(label)
+                            .font(Theme.Typography.keyCap)
+                            .foregroundStyle(Theme.Colors.textTertiary)
+                        TextField("", text: $text)
+                            .textFieldStyle(.plain)
+                            .monospacedDigit()
+                            .focused($isFocused)
+                            .focusEffectDisabled()
+                            .onSubmit(commit)
+                            .onExitCommand(perform: revert)
+                            .onChange(of: text) { _, typed in commitIfValid(typed) }
+                            .onChange(of: isFocused) { _, focused in if !focused { commit() } }
+                            .onChange(of: value) { _, new in if number(text) != new { text = String(new) } }
+                        Divider()
+                            .frame(height: Theme.Spacing.xl)
+                        Text(suffix)
+                            .font(Theme.Typography.keyCap)
+                            .foregroundStyle(Theme.Colors.textSecondary)
+                            .frame(width: Theme.Size.layoutFieldUnit, alignment: .leading)
+                    }
+                    .layoutFieldChrome(isFocused: isFocused)
+                    .accessibilityLabel(name)
+                    .accessibilityValue(Text(verbatim: "\(value) \(suffix)"))
         }
-        .layoutFieldChrome(isFocused: isFocused)
-        .accessibilityLabel(name)
-        .accessibilityValue(Text(verbatim: "\(value) \(suffix)"))
     }
 
     /// Live, so the preview tracks typing and ⌘↵ cannot save behind a value still in the field.

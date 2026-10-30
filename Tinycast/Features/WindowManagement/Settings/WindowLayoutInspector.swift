@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 import SwiftUI
 
 struct WindowLayoutInspector: View {
@@ -18,27 +19,29 @@ struct WindowLayoutInspector: View {
     ]
 
     var body: some View {
-        // Insurance only: at any normal text size every group fits the panel's stated height.
-        ScrollView {
-            VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
-                nameField
-                gapToggle
-                Divider()
-                sectionLabel("Layout")
-                WindowLayoutEntryPicker(draft: draft, displays: displays)
-                if draft.selectedEntry != nil {
-                    WindowLayoutArgumentField(draft: draft)
-                    frontmostToggle
-                    Divider()
-                    sizeFields
-                    offsetFields
-                    positionField
-                }
-            }
-            .padding(Theme.Spacing.xxl)
-            .frame(maxWidth: .infinity, alignment: .leading)
+        WithObservationTracking {
+            // Insurance only: at any normal text size every group fits the panel's stated height.
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
+                            nameField
+                            gapToggle
+                            Divider()
+                            sectionLabel("Layout")
+                            WindowLayoutEntryPicker(draft: draft, displays: displays)
+                            if draft.selectedEntry != nil {
+                                WindowLayoutArgumentField(draft: draft)
+                                frontmostToggle
+                                Divider()
+                                sizeFields
+                                offsetFields
+                                positionField
+                            }
+                        }
+                        .padding(Theme.Spacing.xxl)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .scrollBounceBehavior(.basedOnSize)
         }
-        .scrollBounceBehavior(.basedOnSize)
     }
 
     // MARK: - Layout-wide

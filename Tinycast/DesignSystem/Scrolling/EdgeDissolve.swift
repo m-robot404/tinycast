@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 /// Scroll-driven edge mask for a list underlapping the palette's floating bars. See `docs/ui.md`.
 struct EdgeDissolveMask: ViewModifier {

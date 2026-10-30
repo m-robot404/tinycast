@@ -1,4 +1,5 @@
 import Foundation
+import ObservationPolyfill
 
 /// Owns every binding: persistence, registration with both engines, conflicts and dispatch.
 @MainActor

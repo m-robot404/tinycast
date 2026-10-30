@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 
 /// The one dispatch funnel for system actions, its gates and their feedback.
 @MainActor

@@ -1,4 +1,5 @@
 import Foundation
+import ObservationPolyfill
 
 /// One entry's usage: a decaying score, and the terms it was last opened by.
 struct LauncherVisit: Codable, Hashable, Sendable {

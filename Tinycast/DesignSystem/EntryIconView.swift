@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 /// Draws an `EntryIcon`, seeded from the cache so a warm glyph paints on the first frame.
 struct EntryIconView: View {
@@ -15,21 +16,23 @@ struct EntryIconView: View {
     }
 
     var body: some View {
-        Group {
-            if let image {
-                Image(nsImage: image).resizable()
-            } else {
-                RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous)
-                    .fill(Theme.Colors.iconPlaceholder)
-            }
-        }
-        // Keyed on the glyph, not the entry: re-skinning leaves an id untouched.
-        .task(id: IconRequest(source)) {
-            if let warm = IconCache.cached(source, fileURL: fileURL) {
-                image = warm
-                return
-            }
-            image = await IconCache.loadAsync(source, fileURL: fileURL)
+        WithObservationTracking {
+            Group {
+                        if let image {
+                            Image(nsImage: image).resizable()
+                        } else {
+                            RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous)
+                                .fill(Theme.Colors.iconPlaceholder)
+                        }
+                    }
+                    // Keyed on the glyph, not the entry: re-skinning leaves an id untouched.
+                    .task(id: IconRequest(source)) {
+                        if let warm = IconCache.cached(source, fileURL: fileURL) {
+                            image = warm
+                            return
+                        }
+                        image = await IconCache.loadAsync(source, fileURL: fileURL)
+                    }
         }
     }
 }

@@ -1,4 +1,5 @@
 import Foundation
+import ObservationPolyfill
 import SwiftUI
 
 /// Keeps the extension's item-id selection in sync with Tinycast's flat palette index.

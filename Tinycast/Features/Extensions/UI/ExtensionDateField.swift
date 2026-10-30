@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct ExtensionDateField: View {
     private var form: ExtensionFormMetrics { ExtensionFormMetrics(scale: metrics.scale) }
@@ -42,63 +43,65 @@ struct ExtensionDateField: View {
     }
 
     var body: some View {
-        control
-            .focusable()
-            .focused($focus, equals: index)
-            .focusEffectDisabled()
-            .extensionListPanel(
-                open: open, height: listHeight, revision: revision, flipped: $flipped
-            ) {
-                let rows = suggestions
-                ExtensionPickerList(
-                    items: rows.map {
-                        ExtensionPickerItem(value: $0.title, title: $0.title, detail: $0.detail)
-                    },
-                    selection: highlighted, chosen: [], assetsPath: nil,
-                    onSelect: { choose(rows, at: $0) },
-                    onHighlight: { highlighted = $0 })
-            }
-            .onKeyPress(phases: [.down, .repeat]) { press in
-                guard !palette.menuOpen, !ExtensionFormKey.enterKeys.contains(press.key)
-                else { return .ignored }
-                switch ExtensionListKey(press: press, listOpen: open) {
-                case .openList: return openList()
-                case .moveUp: return move(-1)
-                case .moveDown: return move(1)
-                case .commit:
-                    choose(suggestions, at: highlighted)
-                    return .handled
-                case .dismiss:
-                    close()
-                    return .handled
-                case .append(let characters): return typed(characters)
-                case .deleteBackward:
-                    guard !query.isEmpty else { return .handled }
-                    query.removeLast()
-                    highlighted = 0
-                    return .handled
-                // A date has no value to step: its arrows belong to the list or to nothing.
-                case .stepValue, .ignored: return .ignored
-                }
-            }
-            .modifier(
-                ExtensionFormKeys(
-                    field: .datePicker,
-                    onActivate: {
-                        if open { choose(suggestions, at: highlighted) } else { _ = openList() }
-                    },
-                    onSubmit: {
-                        close(); onSubmit()
-                    })
-            )
-            .onChange(of: open) { palette.noteControlListOpen(open) }
-            .onChange(of: query) { typedAt = Date() }
-            .onScrollVisibilityChange { if !$0 { close() } }
-            .onChange(of: palette.controlListDismissToken) { close() }
-            .onDisappear { if open { palette.noteControlListOpen(false) } }
-            .onChange(of: focus) { _, focus in
-                if focus != index { close() }
-            }
+        WithObservationTracking {
+            control
+                        .focusable()
+                        .focused($focus, equals: index)
+                        .focusEffectDisabled()
+                        .extensionListPanel(
+                            open: open, height: listHeight, revision: revision, flipped: $flipped
+                        ) {
+                            let rows = suggestions
+                            ExtensionPickerList(
+                                items: rows.map {
+                                    ExtensionPickerItem(value: $0.title, title: $0.title, detail: $0.detail)
+                                },
+                                selection: highlighted, chosen: [], assetsPath: nil,
+                                onSelect: { choose(rows, at: $0) },
+                                onHighlight: { highlighted = $0 })
+                        }
+                        .onKeyPress(phases: [.down, .repeat]) { press in
+                            guard !palette.menuOpen, !ExtensionFormKey.enterKeys.contains(press.key)
+                            else { return .ignored }
+                            switch ExtensionListKey(press: press, listOpen: open) {
+                            case .openList: return openList()
+                            case .moveUp: return move(-1)
+                            case .moveDown: return move(1)
+                            case .commit:
+                                choose(suggestions, at: highlighted)
+                                return .handled
+                            case .dismiss:
+                                close()
+                                return .handled
+                            case .append(let characters): return typed(characters)
+                            case .deleteBackward:
+                                guard !query.isEmpty else { return .handled }
+                                query.removeLast()
+                                highlighted = 0
+                                return .handled
+                            // A date has no value to step: its arrows belong to the list or to nothing.
+                            case .stepValue, .ignored: return .ignored
+                            }
+                        }
+                        .modifier(
+                            ExtensionFormKeys(
+                                field: .datePicker,
+                                onActivate: {
+                                    if open { choose(suggestions, at: highlighted) } else { _ = openList() }
+                                },
+                                onSubmit: {
+                                    close(); onSubmit()
+                                })
+                        )
+                        .onChange(of: open) { palette.noteControlListOpen(open) }
+                        .onChange(of: query) { typedAt = Date() }
+                        .onScrollVisibilityChange { if !$0 { close() } }
+                        .onChange(of: palette.controlListDismissToken) { close() }
+                        .onDisappear { if open { palette.noteControlListOpen(false) } }
+                        .onChange(of: focus) { _, focus in
+                            if focus != index { close() }
+                        }
+        }
     }
 
     private var control: some View {

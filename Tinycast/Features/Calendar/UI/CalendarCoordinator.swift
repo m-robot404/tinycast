@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 
 /// Owns joining a meeting: the consent gate, the card's and the chord's actions, feature presence.
 @MainActor

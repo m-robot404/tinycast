@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 import SwiftUI
 
 struct SupportWindowView: View {
@@ -14,30 +15,32 @@ struct SupportWindowView: View {
     private static let iconSize: CGFloat = 76
 
     var body: some View {
-        @Bindable var settings = settings
-        return VStack(spacing: Theme.Spacing.xxl) {
-            hero
-            action
-            reminder(isOn: $settings.supportRemindersEnabled)
+        WithObservationTracking {
+            @Bindable var settings = settings
+                    return VStack(spacing: Theme.Spacing.xxl) {
+                        hero
+                        action
+                        reminder(isOn: $settings.supportRemindersEnabled)
+                    }
+                    // Less on top: the title bar already contributes its own 32pt above this.
+                    .padding(.top, Theme.Spacing.md)
+                    .padding([.horizontal, .bottom], Theme.Spacing.xxl)
+                    // The ideal height, not the window's: measuring its own output would feed back.
+                    .fixedSize(horizontal: false, vertical: true)
+                    .onGeometryChange(for: CGFloat.self) {
+                        $0.size.height
+                    } action: {
+                        support.fit(height: $0)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .top)
+                    // Only the gradient reaches under the titlebar; the content stays in the safe area.
+                    .background(
+                        LinearGradient(
+                            colors: [Theme.Colors.sheen, Color.clear], startPoint: .top, endPoint: .center
+                        )
+                        .ignoresSafeArea()
+                    )
         }
-        // Less on top: the title bar already contributes its own 32pt above this.
-        .padding(.top, Theme.Spacing.md)
-        .padding([.horizontal, .bottom], Theme.Spacing.xxl)
-        // The ideal height, not the window's: measuring its own output would feed back.
-        .fixedSize(horizontal: false, vertical: true)
-        .onGeometryChange(for: CGFloat.self) {
-            $0.size.height
-        } action: {
-            support.fit(height: $0)
-        }
-        .frame(maxWidth: .infinity, alignment: .top)
-        // Only the gradient reaches under the titlebar; the content stays in the safe area.
-        .background(
-            LinearGradient(
-                colors: [Theme.Colors.sheen, Color.clear], startPoint: .top, endPoint: .center
-            )
-            .ignoresSafeArea()
-        )
     }
 
     // MARK: - Hero
@@ -98,26 +101,28 @@ private struct SupportActionButton: View {
     private static let height: CGFloat = 46
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: Theme.Spacing.sm) {
-                Image(systemName: icon)
-                    .font(.body.weight(.semibold))
-                Text(title)
-                    .font(.headline)
-            }
-            // White ink in both appearances: a saturated fill carries its own contrast.
-            .foregroundStyle(Color.white)
-            .padding(.horizontal, Theme.Spacing.xxxl)
-            .frame(height: Self.height)
-            .background(
-                Capsule()
-                    .fill(Theme.Colors.brand)
-                    .brightness(hovered ? 0.08 : 0)
-            )
-            .contentShape(Capsule())
+        WithObservationTracking {
+            Button(action: action) {
+                        HStack(spacing: Theme.Spacing.sm) {
+                            Image(systemName: icon)
+                                .font(.body.weight(.semibold))
+                            Text(title)
+                                .font(.headline)
+                        }
+                        // White ink in both appearances: a saturated fill carries its own contrast.
+                        .foregroundStyle(Color.white)
+                        .padding(.horizontal, Theme.Spacing.xxxl)
+                        .frame(height: Self.height)
+                        .background(
+                            Capsule()
+                                .fill(Theme.Colors.brand)
+                                .brightness(hovered ? 0.08 : 0)
+                        )
+                        .contentShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .onHover { hovered = $0 }
+                    .animation(.easeOut(duration: Theme.Duration.tooltip), value: hovered)
         }
-        .buttonStyle(.plain)
-        .onHover { hovered = $0 }
-        .animation(.easeOut(duration: Theme.Duration.tooltip), value: hovered)
     }
 }

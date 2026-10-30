@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct CustomCommandEditorScreen: PaletteScreen {
     let coordinator: CustomCommandCoordinator

@@ -1,4 +1,5 @@
 import AVKit
+import ObservationPolyfill
 import SwiftUI
 
 struct FileSearchMediaPlayer: View {
@@ -14,13 +15,15 @@ struct FileSearchMediaPlayer: View {
     }
 
     var body: some View {
-        PlayerSurface(player: player)
-            .task(id: PlaybackKey(url: url, isVisible: palette.isVisible)) {
-                stop()
-                guard palette.isVisible else { return }
-                player = AVPlayer(url: url)
-            }
-            .onDisappear(perform: stop)
+        WithObservationTracking {
+            PlayerSurface(player: player)
+                        .task(id: PlaybackKey(url: url, isVisible: palette.isVisible)) {
+                            stop()
+                            guard palette.isVisible else { return }
+                            player = AVPlayer(url: url)
+                        }
+                        .onDisappear(perform: stop)
+        }
     }
 
     /// Dropping the item too: a paused player still holds its asset reader and decoder open.

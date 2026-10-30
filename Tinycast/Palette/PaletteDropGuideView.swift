@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct PaletteDropGuideView: View {
     /// The default placement's top-left, in the guide window's flipped coordinates.
@@ -10,24 +11,26 @@ struct PaletteDropGuideView: View {
     let horizontalFlash: Bool
 
     var body: some View {
-        ZStack {
-            DropGuidePath(topLeft: outerCorner, width: outerWidth, vertical: true)
-                .stroke(
-                    verticalFlash ? Theme.Colors.dropGuideArmed : Theme.Colors.dropGuide,
-                    style: strokeStyle(dash: Theme.Size.dropGuideDash, crossing: outerCorner.y)
-                )
-                .opacity(opacity(at: horizontalDistance))
-                .animation(.easeInOut(duration: Theme.Duration.dropGuide), value: verticalFlash)
-            DropGuidePath(topLeft: outerCorner, width: outerWidth, vertical: false)
-                .stroke(
-                    horizontalFlash ? Theme.Colors.dropGuideArmed : Theme.Colors.dropGuide,
-                    style: strokeStyle(dash: horizontalDash, crossing: outerCorner.x)
-                )
-                .opacity(min(opacity(at: horizontalDistance), opacity(at: verticalDistance)))
-                .animation(.easeInOut(duration: Theme.Duration.dropGuide), value: horizontalFlash)
+        WithObservationTracking {
+            ZStack {
+                        DropGuidePath(topLeft: outerCorner, width: outerWidth, vertical: true)
+                            .stroke(
+                                verticalFlash ? Theme.Colors.dropGuideArmed : Theme.Colors.dropGuide,
+                                style: strokeStyle(dash: Theme.Size.dropGuideDash, crossing: outerCorner.y)
+                            )
+                            .opacity(opacity(at: horizontalDistance))
+                            .animation(.easeInOut(duration: Theme.Duration.dropGuide), value: verticalFlash)
+                        DropGuidePath(topLeft: outerCorner, width: outerWidth, vertical: false)
+                            .stroke(
+                                horizontalFlash ? Theme.Colors.dropGuideArmed : Theme.Colors.dropGuide,
+                                style: strokeStyle(dash: horizontalDash, crossing: outerCorner.x)
+                            )
+                            .opacity(min(opacity(at: horizontalDistance), opacity(at: verticalDistance)))
+                            .animation(.easeInOut(duration: Theme.Duration.dropGuide), value: horizontalFlash)
+                    }
+                    // Its host is typed to this view, so the root's scope is applied from inside.
+                    .motionScope()
         }
-        // Its host is typed to this view, so the root's scope is applied from inside.
-        .motionScope()
     }
 
     private var outerCorner: CGPoint {

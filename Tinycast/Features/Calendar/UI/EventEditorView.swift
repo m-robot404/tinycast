@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct EventEditorView: View {
     @Bindable var editor: EventEditorSession
@@ -14,63 +15,65 @@ struct EventEditorView: View {
     @State private var menuFrames: [EventEditorSession.Field: CGRect] = [:]
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: metrics.spacing.xxl) {
-                FormRow("Title") {
-                    FormTextInput(
-                        text: $editor.draft.title, focused: titleFocused,
-                        placeholder: String(localized: "Event title"),
-                        label: String(localized: "Event title"), moveFocus: editor.advanceFocus
-                    )
-                    .frame(height: metrics.size.dialogButtonHeight)
-                    .formFieldChrome(focused: focusedField == .title)
-                }
-                FormRow("Start") {
-                    choice(
-                        String(localized: "Start"), field: .start,
-                        selection: $editor.draft.startOffsetMinutes,
-                        values: EventDraft.startOffsets,
-                        label: { EventDraft.label(startOffset: $0, locale: .current) })
-                }
-                FormRow("Duration") {
-                    choice(
-                        String(localized: "Duration"), field: .duration,
-                        selection: $editor.draft.durationMinutes,
-                        values: EventDraft.durations,
-                        label: { EventDraft.label(duration: $0, locale: .current) })
-                }
-                FormRow {
-                    Text("The event will be added to your default calendar.")
-                        .font(metrics.typography.rowTrailing)
-                        .foregroundStyle(Theme.Colors.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            .font(metrics.typography.rowTitle)
-            .foregroundStyle(Theme.Colors.textPrimary)
-            .padding(.horizontal, metrics.spacing.xxxl * 2)
-            .padding(.vertical, metrics.spacing.md)
-        }
-        .scrollClipDisabled()
-        .edgeDissolve()
-        .focusEffectDisabled()
-        .task(id: palette.focusToken) {
-            palette.noteEditingField(true)
-            await Task.yield()
-            guard !Task.isCancelled else { return }
-            focusedField = editor.focusedField
-        }
-        .onChange(of: editor.focusedField) { _, field in focusedField = field }
-        .onChange(of: focusedField) { _, field in
-            if let field { editor.focusedField = field }
-            focusedControl = field == .title ? nil : field
-        }
-        .onChange(of: focusedControl) { _, field in
-            if let field { focusedField = field }
-        }
-        .onDisappear {
-            coordinator.editorDidClose(editor)
-            palette.noteEditingField(false)
+        WithObservationTracking {
+            ScrollView {
+                        VStack(spacing: metrics.spacing.xxl) {
+                            FormRow("Title") {
+                                FormTextInput(
+                                    text: $editor.draft.title, focused: titleFocused,
+                                    placeholder: String(localized: "Event title"),
+                                    label: String(localized: "Event title"), moveFocus: editor.advanceFocus
+                                )
+                                .frame(height: metrics.size.dialogButtonHeight)
+                                .formFieldChrome(focused: focusedField == .title)
+                            }
+                            FormRow("Start") {
+                                choice(
+                                    String(localized: "Start"), field: .start,
+                                    selection: $editor.draft.startOffsetMinutes,
+                                    values: EventDraft.startOffsets,
+                                    label: { EventDraft.label(startOffset: $0, locale: .current) })
+                            }
+                            FormRow("Duration") {
+                                choice(
+                                    String(localized: "Duration"), field: .duration,
+                                    selection: $editor.draft.durationMinutes,
+                                    values: EventDraft.durations,
+                                    label: { EventDraft.label(duration: $0, locale: .current) })
+                            }
+                            FormRow {
+                                Text("The event will be added to your default calendar.")
+                                    .font(metrics.typography.rowTrailing)
+                                    .foregroundStyle(Theme.Colors.textSecondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                        .font(metrics.typography.rowTitle)
+                        .foregroundStyle(Theme.Colors.textPrimary)
+                        .padding(.horizontal, metrics.spacing.xxxl * 2)
+                        .padding(.vertical, metrics.spacing.md)
+                    }
+                    .scrollClipDisabled()
+                    .edgeDissolve()
+                    .focusEffectDisabled()
+                    .task(id: palette.focusToken) {
+                        palette.noteEditingField(true)
+                        await Task.yield()
+                        guard !Task.isCancelled else { return }
+                        focusedField = editor.focusedField
+                    }
+                    .onChange(of: editor.focusedField) { _, field in focusedField = field }
+                    .onChange(of: focusedField) { _, field in
+                        if let field { editor.focusedField = field }
+                        focusedControl = field == .title ? nil : field
+                    }
+                    .onChange(of: focusedControl) { _, field in
+                        if let field { focusedField = field }
+                    }
+                    .onDisappear {
+                        coordinator.editorDidClose(editor)
+                        palette.noteEditingField(false)
+                    }
         }
     }
 

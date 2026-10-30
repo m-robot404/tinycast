@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 /// Row order comes from `ExtensionScreen`, so the palette's flat index matches the draw.
 struct ExtensionListView: View {
@@ -16,21 +17,23 @@ struct ExtensionListView: View {
     private static let detailListWidth: CGFloat = 290
 
     var body: some View {
-        Group {
-            if screen.items.isEmpty {
-                emptyState
-            } else if screen.showsDetail {
-                HStack(spacing: 0) {
-                    rowList
-                        .frame(width: metrics.scaled(Self.detailListWidth))
-                    Rectangle().fill(Theme.Colors.separator).frame(width: 1)
-                    detailPane
-                }
-            } else if case .grid(let layout) = screen.kind {
-                gridBody(layout: layout)
-            } else {
-                rowList
-            }
+        WithObservationTracking {
+            Group {
+                        if screen.items.isEmpty {
+                            emptyState
+                        } else if screen.showsDetail {
+                            HStack(spacing: 0) {
+                                rowList
+                                    .frame(width: metrics.scaled(Self.detailListWidth))
+                                Rectangle().fill(Theme.Colors.separator).frame(width: 1)
+                                detailPane
+                            }
+                        } else if case .grid(let layout) = screen.kind {
+                            gridBody(layout: layout)
+                        } else {
+                            rowList
+                        }
+                    }
         }
     }
 
@@ -181,36 +184,38 @@ private struct ExtensionItemRow: View {
     }
 
     var body: some View {
-        HStack(spacing: metrics.spacing.lg) {
-            if let icon = node.props["icon"], icon != .null {
-                ExtensionIconView(
-                    resolved: ExtensionImage.resolve(icon, assetsPath: assetsPath, isDark: isDark),
-                    size: metrics.size.resultRowIcon)
-            }
-            Text(node.string("title") ?? "")
-                .font(metrics.typography.rowTitle)
-                .lineLimit(1)
-                // Outranks the Spacer, which would otherwise take half the title's room.
-                .layoutPriority(1)
-            if !compact, let subtitle = node.string("subtitle"), !subtitle.isEmpty {
-                Text(subtitle)
-                    .font(metrics.typography.rowTrailing)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-            Spacer(minLength: metrics.spacing.sm)
-            // Raycast draws the accessories it is given, and a quota row's signal is all in them.
-            ExtensionAccessoriesView(
-                accessories: node.array("accessories"), assetsPath: assetsPath
-            )
-            .fixedSize(horizontal: true, vertical: false)
+        WithObservationTracking {
+            HStack(spacing: metrics.spacing.lg) {
+                        if let icon = node.props["icon"], icon != .null {
+                            ExtensionIconView(
+                                resolved: ExtensionImage.resolve(icon, assetsPath: assetsPath, isDark: isDark),
+                                size: metrics.size.resultRowIcon)
+                        }
+                        Text(node.string("title") ?? "")
+                            .font(metrics.typography.rowTitle)
+                            .lineLimit(1)
+                            // Outranks the Spacer, which would otherwise take half the title's room.
+                            .layoutPriority(1)
+                        if !compact, let subtitle = node.string("subtitle"), !subtitle.isEmpty {
+                            Text(subtitle)
+                                .font(metrics.typography.rowTrailing)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                        Spacer(minLength: metrics.spacing.sm)
+                        // Raycast draws the accessories it is given, and a quota row's signal is all in them.
+                        ExtensionAccessoriesView(
+                            accessories: node.array("accessories"), assetsPath: assetsPath
+                        )
+                        .fixedSize(horizontal: true, vertical: false)
+                    }
+                    .padding(.horizontal, metrics.spacing.md)
+                    .padding(.vertical, metrics.spacing.sm)
+                    .background(
+                        RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous).fill(fill)
+                    )
+                    .armedHover($hovered)
         }
-        .padding(.horizontal, metrics.spacing.md)
-        .padding(.vertical, metrics.spacing.sm)
-        .background(
-            RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous).fill(fill)
-        )
-        .armedHover($hovered)
     }
 }
 
@@ -222,12 +227,14 @@ struct ExtensionAccessoriesView: View {
     let assetsPath: String?
 
     var body: some View {
-        HStack(spacing: metrics.spacing.sm) {
-            ForEach(Array(accessories.enumerated()), id: \.offset) { _, accessory in
-                if let fields = accessory.objectValue {
-                    accessoryView(fields)
-                }
-            }
+        WithObservationTracking {
+            HStack(spacing: metrics.spacing.sm) {
+                        ForEach(Array(accessories.enumerated()), id: \.offset) { _, accessory in
+                            if let fields = accessory.objectValue {
+                                accessoryView(fields)
+                            }
+                        }
+                    }
         }
     }
 
@@ -329,22 +336,24 @@ private struct ExtensionGridCell: View {
     }
 
     var body: some View {
-        VStack(spacing: metrics.spacing.xs) {
-            tile
-            if let title = node.string("title") {
-                Text(title)
-                    .font(metrics.typography.rowTrailing)
-                    .lineLimit(1)
-            }
-            if let subtitle = node.string("subtitle") {
-                Text(subtitle)
-                    .font(metrics.typography.rowTrailing)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
+        WithObservationTracking {
+            VStack(spacing: metrics.spacing.xs) {
+                        tile
+                        if let title = node.string("title") {
+                            Text(title)
+                                .font(metrics.typography.rowTrailing)
+                                .lineLimit(1)
+                        }
+                        if let subtitle = node.string("subtitle") {
+                            Text(subtitle)
+                                .font(metrics.typography.rowTrailing)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                    }
+                    .frame(width: width)
+                    .armedHover($hovered)
         }
-        .frame(width: width)
-        .armedHover($hovered)
     }
 
     private var tile: some View {
@@ -391,11 +400,13 @@ private struct ExtensionGridContentView: View {
     @State private var loaded: NSImage?
 
     var body: some View {
-        content
-            // Keyed on appearance too: an inline SVG's palette resolves at decode.
-            .task(id: ExtensionImage.LoadKey(source: resolved?.source, isDark: isDark)) {
-                loaded = await ExtensionImage.load(resolved, isDark: isDark, animates: true)
-            }
+        WithObservationTracking {
+            content
+                        // Keyed on appearance too: an inline SVG's palette resolves at decode.
+                        .task(id: ExtensionImage.LoadKey(source: resolved?.source, isDark: isDark)) {
+                            loaded = await ExtensionImage.load(resolved, isDark: isDark, animates: true)
+                        }
+        }
     }
 
     @ViewBuilder

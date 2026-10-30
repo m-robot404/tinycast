@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct SnippetEditorView: View {
     @Bindable var editor: SnippetEditorSession
@@ -12,38 +13,40 @@ struct SnippetEditorView: View {
     @State private var placeholderMenuFrame: CGRect = .zero
 
     var body: some View {
-        ScrollView {
-            HStack(alignment: .top, spacing: metrics.spacing.xxl) {
-                templateEditor
-                properties
-            }
-            .padding(.horizontal, metrics.spacing.xxxl * 2)
-            .padding(.vertical, metrics.spacing.md)
-        }
-        .scrollClipDisabled()
-        .edgeDissolve()
-        .disabled(editor.isSaving)
-        .focusEffectDisabled()
-        .task(id: palette.focusToken) {
-            palette.noteEditingField(true)
-            await Task.yield()
-            guard !Task.isCancelled else { return }
-            focusedField = editor.focusedField
-        }
-        .task(id: editor.isSaving) {
-            if editor.isSaving { await coordinator.saveSnippet(editor) }
-        }
-        .onChange(of: editor.focusedField) { _, field in focusedField = field }
-        .onChange(of: focusedField) { _, field in
-            if let field { editor.focusedField = field }
-            focusedControl = field == .enabled || field == .confirmation ? field : nil
-        }
-        .onChange(of: focusedControl) { _, field in
-            if let field { focusedField = field }
-        }
-        .onDisappear {
-            coordinator.editorDidClose(editor)
-            palette.noteEditingField(false)
+        WithObservationTracking {
+            ScrollView {
+                        HStack(alignment: .top, spacing: metrics.spacing.xxl) {
+                            templateEditor
+                            properties
+                        }
+                        .padding(.horizontal, metrics.spacing.xxxl * 2)
+                        .padding(.vertical, metrics.spacing.md)
+                    }
+                    .scrollClipDisabled()
+                    .edgeDissolve()
+                    .disabled(editor.isSaving)
+                    .focusEffectDisabled()
+                    .task(id: palette.focusToken) {
+                        palette.noteEditingField(true)
+                        await Task.yield()
+                        guard !Task.isCancelled else { return }
+                        focusedField = editor.focusedField
+                    }
+                    .task(id: editor.isSaving) {
+                        if editor.isSaving { await coordinator.saveSnippet(editor) }
+                    }
+                    .onChange(of: editor.focusedField) { _, field in focusedField = field }
+                    .onChange(of: focusedField) { _, field in
+                        if let field { editor.focusedField = field }
+                        focusedControl = field == .enabled || field == .confirmation ? field : nil
+                    }
+                    .onChange(of: focusedControl) { _, field in
+                        if let field { focusedField = field }
+                    }
+                    .onDisappear {
+                        coordinator.editorDidClose(editor)
+                        palette.noteEditingField(false)
+                    }
         }
     }
 

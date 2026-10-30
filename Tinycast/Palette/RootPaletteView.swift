@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct RootPaletteView: View {
     @Environment(AppCore.self) private var core
@@ -300,63 +301,65 @@ struct RootPaletteView: View {
     }
 
     var body: some View {
-        // Resolve the screen once per render, so the flat index can't drift from the rows.
-        let screen = screen
-        let count = screen.rows.count
-        let sel = selection(count: count)
-        // An extension's Form has no rows to count, but ↵ still acts.
-        let showActionGroup =
-            (count > 0 || screen.actsWithoutRows)
-            && screen.hasPrimaryAction(at: sel)
+        WithObservationTracking {
+            // Resolve the screen once per render, so the flat index can't drift from the rows.
+                    let screen = screen
+                    let count = screen.rows.count
+                    let sel = selection(count: count)
+                    // An extension's Form has no rows to count, but ↵ still acts.
+                    let showActionGroup =
+                        (count > 0 || screen.actsWithoutRows)
+                        && screen.hasPrimaryAction(at: sel)
 
-        // One header position, so focus survives the swap. See docs/features/palette.md.
-        return keyHandlers(
-            stateObservers(
-                Group {
-                    if isCollapsed {
-                        Color.clear
-                    } else {
-                        screen.body(selection: sel, scroll: scroll)
-                    }
-                }
-                .safeAreaInset(edge: .top, spacing: 0) { header }
-                .safeAreaInset(edge: .bottom, spacing: 0) {
-                    if !isCollapsed {
-                        bottomBar(
-                            pillLabel: screen.primaryActionTitle, showActionGroup: showActionGroup,
-                            formPrimaryShortcut: screen.hidesSearchField && screen.actsWithoutRows,
-                            primaryActionEnabled: screen.isPrimaryActionEnabled(at: sel),
-                            showActions: screen.hasActions(at: sel))
-                    }
-                }
-                // No title bar, so this thin top margin is the only place left to grab the panel.
-                .overlay(alignment: .topLeading) { topDragStrip }
-                // The menu lives in its own window; this only reports the one to hang it from.
-                .background(
-                    WindowReader {
-                        hostWindow = $0
-                        installHeaderArrowHandler(in: $0)
-                    }
-                )
-                // The window's frame is the size source, so the glass and clip stay matched.
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                // Compact, the bar's own glass shapes are the surface and the window is bare.
-                .background(isCollapsed ? .clear : Theme.Colors.panelScrim)
-                // Hidden rather than unmounted, so expanding never shows a frame without glass.
-                .background(GlassEffectView().opacity(isCollapsed ? 0 : 1))
-                .overlay {
-                    Theme.Colors.dialogDimming
-                        .opacity(core.isDimmingPaletteForDialog && !isCollapsed ? 1 : 0)
-                        .allowsHitTesting(false)
-                }
-                .animation(
-                    .easeOut(
-                        duration: core.isDimmingPaletteForDialog
-                            ? Theme.Duration.dialogEnter : Theme.Duration.dialogExit),
-                    value: core.isDimmingPaletteForDialog
-                )
-                .clipShape(RoundedRectangle(cornerRadius: metrics.radius.panel, style: .continuous))),
-            selection: sel)
+                    // One header position, so focus survives the swap. See docs/features/palette.md.
+                    return keyHandlers(
+                        stateObservers(
+                            Group {
+                                if isCollapsed {
+                                    Color.clear
+                                } else {
+                                    screen.body(selection: sel, scroll: scroll)
+                                }
+                            }
+                            .safeAreaInset(edge: .top, spacing: 0) { header }
+                            .safeAreaInset(edge: .bottom, spacing: 0) {
+                                if !isCollapsed {
+                                    bottomBar(
+                                        pillLabel: screen.primaryActionTitle, showActionGroup: showActionGroup,
+                                        formPrimaryShortcut: screen.hidesSearchField && screen.actsWithoutRows,
+                                        primaryActionEnabled: screen.isPrimaryActionEnabled(at: sel),
+                                        showActions: screen.hasActions(at: sel))
+                                }
+                            }
+                            // No title bar, so this thin top margin is the only place left to grab the panel.
+                            .overlay(alignment: .topLeading) { topDragStrip }
+                            // The menu lives in its own window; this only reports the one to hang it from.
+                            .background(
+                                WindowReader {
+                                    hostWindow = $0
+                                    installHeaderArrowHandler(in: $0)
+                                }
+                            )
+                            // The window's frame is the size source, so the glass and clip stay matched.
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                            // Compact, the bar's own glass shapes are the surface and the window is bare.
+                            .background(isCollapsed ? .clear : Theme.Colors.panelScrim)
+                            // Hidden rather than unmounted, so expanding never shows a frame without glass.
+                            .background(GlassEffectView().opacity(isCollapsed ? 0 : 1))
+                            .overlay {
+                                Theme.Colors.dialogDimming
+                                    .opacity(core.isDimmingPaletteForDialog && !isCollapsed ? 1 : 0)
+                                    .allowsHitTesting(false)
+                            }
+                            .animation(
+                                .easeOut(
+                                    duration: core.isDimmingPaletteForDialog
+                                        ? Theme.Duration.dialogEnter : Theme.Duration.dialogExit),
+                                value: core.isDimmingPaletteForDialog
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: metrics.radius.panel, style: .continuous))),
+                        selection: sel)
+        }
     }
 
     /// The emoji grid's observers, split out so `stateObservers` stays within type-checker reach.
@@ -1586,19 +1589,21 @@ private struct MenuCircleButton: View {
     @Environment(\.metrics) private var metrics
 
     var body: some View {
-        Button(action: action) {
-            VStack(alignment: .leading, spacing: 3) {
-                Capsule().frame(width: 14, height: 1.5)
-                Capsule().frame(width: 8, height: 1.5)
-            }
-            .foregroundStyle(Theme.Colors.textSecondary)
-            .frame(width: metrics.size.menuButton, height: metrics.size.menuButton)
-            .background(Circle().fill(hovered ? Theme.Colors.rowHover : Color.clear))
-            .contentShape(.circle)
+        WithObservationTracking {
+            Button(action: action) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Capsule().frame(width: 14, height: 1.5)
+                            Capsule().frame(width: 8, height: 1.5)
+                        }
+                        .foregroundStyle(Theme.Colors.textSecondary)
+                        .frame(width: metrics.size.menuButton, height: metrics.size.menuButton)
+                        .background(Circle().fill(hovered ? Theme.Colors.rowHover : Color.clear))
+                        .contentShape(.circle)
+                    }
+                    .buttonStyle(.plain)
+                    .onHover { hovered = $0 }
+                    .frosted(in: Circle())
         }
-        .buttonStyle(.plain)
-        .onHover { hovered = $0 }
-        .frosted(in: Circle())
     }
 }
 
@@ -1610,17 +1615,19 @@ private struct HeaderBackButton: View {
     @Environment(\.metrics) private var metrics
 
     var body: some View {
-        Button(action: action) {
-            Image(systemName: "chevron.left")
-                .font(metrics.typography.headerIcon)
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(hovered ? Theme.Colors.textPrimary : Theme.Colors.textSecondary)
-                .frame(width: metrics.size.headerIconSlot)
-                .contentShape(Rectangle())
+        WithObservationTracking {
+            Button(action: action) {
+                        Image(systemName: "chevron.left")
+                            .font(metrics.typography.headerIcon)
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(hovered ? Theme.Colors.textPrimary : Theme.Colors.textSecondary)
+                            .frame(width: metrics.size.headerIconSlot)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .onHover { hovered = $0 }
+                    .animation(.easeOut(duration: Theme.Duration.hover), value: hovered)
+                    .help(help)
         }
-        .buttonStyle(.plain)
-        .onHover { hovered = $0 }
-        .animation(.easeOut(duration: Theme.Duration.hover), value: hovered)
-        .help(help)
     }
 }

@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 import SwiftUI
 
 /// A child window of the note panel, so it tracks its host's every move and can still outgrow it.

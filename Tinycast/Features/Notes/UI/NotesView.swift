@@ -1,21 +1,24 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct NotesView: View {
     @Environment(NotesCoordinator.self) private var notes
 
     var body: some View {
-        VStack(spacing: 0) {
-            titleBar
-            content
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Theme.Colors.panelScrim)
-        .background(GlassEffectView())
-        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.panel, style: .continuous))
-        // The band above is the title bar; AppKit must not inset the content a second time.
-        .ignoresSafeArea()
-        .onChange(of: notes.showsFormattingBar && notes.hasActiveNote) { _, shown in
-            if !shown { notes.closeHeadingMenu() }
+        WithObservationTracking {
+            VStack(spacing: 0) {
+                        titleBar
+                        content
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Theme.Colors.panelScrim)
+                    .background(GlassEffectView())
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.panel, style: .continuous))
+                    // The band above is the title bar; AppKit must not inset the content a second time.
+                    .ignoresSafeArea()
+                    .onChange(of: notes.showsFormattingBar && notes.hasActiveNote) { _, shown in
+                        if !shown { notes.closeHeadingMenu() }
+                    }
         }
     }
 
@@ -146,20 +149,22 @@ private struct NoteTitlebarActions: View {
     @Environment(NotesCoordinator.self) private var notes
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.xxs) {
-            action(
-                "plus", String(localized: "Create Note"), String(localized: "Create Note  ⌘N"),
-                notes.createNote)
-            action(
-                "rectangle.stack", String(localized: "Browse Notes"),
-                String(localized: "Browse Notes  ⌘P"), notes.searchNotes)
-            action(
-                "folder", String(localized: "Open Notes Folder"),
-                String(localized: "Open Notes Folder  ⌘O"), notes.openNotesFolder)
+        WithObservationTracking {
+            HStack(spacing: Theme.Spacing.xxs) {
+                        action(
+                            "plus", String(localized: "Create Note"), String(localized: "Create Note  ⌘N"),
+                            notes.createNote)
+                        action(
+                            "rectangle.stack", String(localized: "Browse Notes"),
+                            String(localized: "Browse Notes  ⌘P"), notes.searchNotes)
+                        action(
+                            "folder", String(localized: "Open Notes Folder"),
+                            String(localized: "Open Notes Folder  ⌘O"), notes.openNotesFolder)
+                    }
+                    .padding(Theme.Spacing.xs)
+                    .frosted(in: Capsule())
+                    .padding(.trailing, Theme.Spacing.md)
         }
-        .padding(Theme.Spacing.xs)
-        .frosted(in: Capsule())
-        .padding(.trailing, Theme.Spacing.md)
     }
 
     private func action(

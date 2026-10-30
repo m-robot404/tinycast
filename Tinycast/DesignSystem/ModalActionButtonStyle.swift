@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct ModalActionButtonStyle: ButtonStyle {
     enum Role { case standard, primary, cancel, destructive }
@@ -19,17 +20,19 @@ struct ModalActionButtonStyle: ButtonStyle {
         @State private var hovered = false
 
         var body: some View {
-            configuration.label
-                .font(metrics.typography.rowTrailing)
-                .foregroundStyle(labelColor)
-                .padding(.horizontal, metrics.spacing.xl)
-                .frame(maxWidth: fillsWidth ? .infinity : nil)
-                .frame(height: metrics.size.dialogButtonHeight)
-                .contentShape(Capsule())
-                .background(Capsule().fill(fill))
-                .animation(.easeOut(duration: Theme.Duration.hover), value: hovered)
-                .opacity(isEnabled ? 1 : 0.45)
-                .onHover { hovered = $0 }
+            WithObservationTracking {
+                configuration.label
+                                .font(metrics.typography.rowTrailing)
+                                .foregroundStyle(labelColor)
+                                .padding(.horizontal, metrics.spacing.xl)
+                                .frame(maxWidth: fillsWidth ? .infinity : nil)
+                                .frame(height: metrics.size.dialogButtonHeight)
+                                .contentShape(Capsule())
+                                .background(Capsule().fill(fill))
+                                .animation(.easeOut(duration: Theme.Duration.hover), value: hovered)
+                                .opacity(isEnabled ? 1 : 0.45)
+                                .onHover { hovered = $0 }
+            }
         }
 
         private var fill: Color {

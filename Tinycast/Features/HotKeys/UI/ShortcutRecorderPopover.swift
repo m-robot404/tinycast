@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 /// Bounds of the open recorder, so an ancestor outside the `ScrollView` can draw it.
 struct ShortcutRecorderAnchorKey: PreferenceKey {
@@ -34,42 +35,44 @@ struct ShortcutRecorderPopover: View {
     }
 
     var body: some View {
-        let state = self.state
-        VStack(spacing: Theme.Spacing.sm) {
-            HStack(spacing: Theme.Spacing.sm) {
-                ForEach(Array(state.caps.enumerated()), id: \.offset) { _, cap in
-                    KeyCapChip(text: cap, scale: .hero, prefix: state.prefix)
-                }
-            }
-            .frame(height: Theme.Size.heroKeyCap)
-            .opacity(state.isExample ? 0.5 : 1)
+        WithObservationTracking {
+            let state = self.state
+                    VStack(spacing: Theme.Spacing.sm) {
+                        HStack(spacing: Theme.Spacing.sm) {
+                            ForEach(Array(state.caps.enumerated()), id: \.offset) { _, cap in
+                                KeyCapChip(text: cap, scale: .hero, prefix: state.prefix)
+                            }
+                        }
+                        .frame(height: Theme.Size.heroKeyCap)
+                        .opacity(state.isExample ? 0.5 : 1)
 
-            Text(state.label)
-                .font(Theme.Typography.compactKeyCap)
-                .foregroundStyle(state.tint ?? Theme.Colors.textSecondary)
-                .lineLimit(2)
-                .multilineTextAlignment(.center)
-                .truncationMode(.tail)
-                .frame(height: Theme.Size.shortcutPopoverLine * 2)
+                        Text(state.label)
+                            .font(Theme.Typography.compactKeyCap)
+                            .foregroundStyle(state.tint ?? Theme.Colors.textSecondary)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.center)
+                            .truncationMode(.tail)
+                            .frame(height: Theme.Size.shortcutPopoverLine * 2)
+                    }
+                    .offset(y: Theme.Spacing.sm + 1)
+                    .padding(.horizontal, Theme.Spacing.md)
+                    .padding(.vertical, Theme.Spacing.sm)
+                    .padding(placement.caretEdge == .top ? .top : .bottom, Theme.Size.calloutCaretHeight)
+                    .frame(
+                        width: Theme.Size.shortcutPopover.width, height: Theme.Size.shortcutPopover.height
+                    )
+                    .overlay(alignment: .topLeading) {
+                        KeyCapChip(text: String(localized: "esc"), scale: .compact)
+                            .opacity(0.7)
+                            .padding(.leading, Theme.Spacing.md)
+                            .padding(
+                                .top,
+                                Theme.Spacing.sm
+                                    + (placement.caretEdge == .top ? Theme.Size.calloutCaretHeight : 0))
+                    }
+                    .glassEffect(
+                        .regular, in: CalloutShape(caretEdge: placement.caretEdge, caretX: placement.caretX))
         }
-        .offset(y: Theme.Spacing.sm + 1)
-        .padding(.horizontal, Theme.Spacing.md)
-        .padding(.vertical, Theme.Spacing.sm)
-        .padding(placement.caretEdge == .top ? .top : .bottom, Theme.Size.calloutCaretHeight)
-        .frame(
-            width: Theme.Size.shortcutPopover.width, height: Theme.Size.shortcutPopover.height
-        )
-        .overlay(alignment: .topLeading) {
-            KeyCapChip(text: String(localized: "esc"), scale: .compact)
-                .opacity(0.7)
-                .padding(.leading, Theme.Spacing.md)
-                .padding(
-                    .top,
-                    Theme.Spacing.sm
-                        + (placement.caretEdge == .top ? Theme.Size.calloutCaretHeight : 0))
-        }
-        .glassEffect(
-            .regular, in: CalloutShape(caretEdge: placement.caretEdge, caretX: placement.caretX))
     }
 
     private var state: State {
@@ -135,34 +138,36 @@ private struct ShortcutRecorderPopoverLayer: View {
     @State private var isVisible = false
 
     var body: some View {
-        Color.clear.overlay {
-            if let presentedPlacement {
-                ShortcutRecorderPopover(placement: presentedPlacement)
-                    .scaleEffect(
-                        isVisible ? 1 : 0.5, anchor: scaleAnchor(for: presentedPlacement)
-                    )
-                    .opacity(isVisible ? 1 : 0)
-                    .position(presentedPlacement.center)
-            }
-        }
-        .onChange(of: placement, initial: true) { _, placement in
-            guard let placement, recordingAction != nil else { return }
-            present(at: placement)
-        }
-        .onChange(of: recordingAction, initial: true) { _, recordingAction in
-            if recordingAction == nil {
-                withAnimation(exitAnimation) { isVisible = false }
-            } else if let placement {
-                present(at: placement)
-            }
-        }
-        .task(id: isVisible) {
-            guard !isVisible, presentedPlacement != nil else { return }
-            if !reduceMotion {
-                try? await Task.sleep(for: .seconds(Theme.Duration.exit))
-            }
-            guard !Task.isCancelled, !isVisible else { return }
-            presentedPlacement = nil
+        WithObservationTracking {
+            Color.clear.overlay {
+                        if let presentedPlacement {
+                            ShortcutRecorderPopover(placement: presentedPlacement)
+                                .scaleEffect(
+                                    isVisible ? 1 : 0.5, anchor: scaleAnchor(for: presentedPlacement)
+                                )
+                                .opacity(isVisible ? 1 : 0)
+                                .position(presentedPlacement.center)
+                        }
+                    }
+                    .onChange(of: placement, initial: true) { _, placement in
+                        guard let placement, recordingAction != nil else { return }
+                        present(at: placement)
+                    }
+                    .onChange(of: recordingAction, initial: true) { _, recordingAction in
+                        if recordingAction == nil {
+                            withAnimation(exitAnimation) { isVisible = false }
+                        } else if let placement {
+                            present(at: placement)
+                        }
+                    }
+                    .task(id: isVisible) {
+                        guard !isVisible, presentedPlacement != nil else { return }
+                        if !reduceMotion {
+                            try? await Task.sleep(for: .seconds(Theme.Duration.exit))
+                        }
+                        guard !Task.isCancelled, !isVisible else { return }
+                        presentedPlacement = nil
+                    }
         }
     }
 

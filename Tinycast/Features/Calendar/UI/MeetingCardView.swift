@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct MeetingCard: View {
     @Environment(\.metrics) private var metrics
@@ -7,45 +8,47 @@ struct MeetingCard: View {
     let selected: Bool
 
     var body: some View {
-        HStack(spacing: metrics.spacing.xl) {
-            SymbolImage(
-                name: meeting.link?.provider.sfSymbol ?? "calendar",
-                size: metrics.size.headerIconSlot
-            )
-            .foregroundStyle(.secondary)
-            VStack(alignment: .leading, spacing: metrics.spacing.xs) {
-                Text(meeting.title)
-                    .font(metrics.typography.calcResult.weight(.semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-                HStack(spacing: metrics.spacing.sm) {
-                    if let tint = meeting.calendarColor { ColorDot(color: tint.color) }
-                    Text(subtitle)
-                        .font(metrics.typography.rowTrailing)
+        WithObservationTracking {
+            HStack(spacing: metrics.spacing.xl) {
+                        SymbolImage(
+                            name: meeting.link?.provider.sfSymbol ?? "calendar",
+                            size: metrics.size.headerIconSlot
+                        )
                         .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-            }
-            Spacer(minLength: metrics.spacing.md)
-            Text(UpcomingWindow.countdown(to: meeting.start, now: now, locale: .current))
-                .font(metrics.typography.rowTitle.weight(.medium))
-                .lineLimit(1)
-                .padding(.horizontal, metrics.spacing.md)
-                .padding(.vertical, metrics.spacing.xxs)
-                .background(
-                    RoundedRectangle(cornerRadius: metrics.radius.keyCap, style: .continuous)
-                        .fill(Theme.Colors.controlSurface)
-                )
+                        VStack(alignment: .leading, spacing: metrics.spacing.xs) {
+                            Text(meeting.title)
+                                .font(metrics.typography.calcResult.weight(.semibold))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.6)
+                            HStack(spacing: metrics.spacing.sm) {
+                                if let tint = meeting.calendarColor { ColorDot(color: tint.color) }
+                                Text(subtitle)
+                                    .font(metrics.typography.rowTrailing)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                            }
+                        }
+                        Spacer(minLength: metrics.spacing.md)
+                        Text(UpcomingWindow.countdown(to: meeting.start, now: now, locale: .current))
+                            .font(metrics.typography.rowTitle.weight(.medium))
+                            .lineLimit(1)
+                            .padding(.horizontal, metrics.spacing.md)
+                            .padding(.vertical, metrics.spacing.xxs)
+                            .background(
+                                RoundedRectangle(cornerRadius: metrics.radius.keyCap, style: .continuous)
+                                    .fill(Theme.Colors.controlSurface)
+                            )
+                    }
+                    .padding(.horizontal, metrics.spacing.xl)
+                    .padding(.vertical, metrics.spacing.xxl)
+                    .leadCard(selected: selected)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel(
+                        "\(meeting.title), \(subtitle), "
+                            + UpcomingWindow.countdown(to: meeting.start, now: now, locale: .current)
+                    )
+                    .accessibilityAddTraits(.isButton)
         }
-        .padding(.horizontal, metrics.spacing.xl)
-        .padding(.vertical, metrics.spacing.xxl)
-        .leadCard(selected: selected)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(
-            "\(meeting.title), \(subtitle), "
-                + UpcomingWindow.countdown(to: meeting.start, now: now, locale: .current)
-        )
-        .accessibilityAddTraits(.isButton)
     }
 
     private var subtitle: String {

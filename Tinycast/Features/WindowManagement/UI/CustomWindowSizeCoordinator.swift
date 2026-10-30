@@ -1,4 +1,5 @@
 import Foundation
+import ObservationPolyfill
 
 /// Owns custom sizes' presence, edits and cleanup; observable only for `@Environment`.
 @MainActor

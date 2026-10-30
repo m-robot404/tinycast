@@ -1,5 +1,6 @@
 // Adapted from Rooms (MIT): https://github.com/saragordic/rooms/blob/main/LICENSE
 import AppKit
+import ObservationPolyfill
 
 /// Owns rooms: presence, the one enter funnel with its gate, the preview, the picker, cleanup.
 @MainActor

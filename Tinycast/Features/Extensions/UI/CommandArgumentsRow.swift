@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 /// The inline argument fields beside the search field; their own `FocusState`, Tab hands over.
 struct CommandArgumentsRow: View {
@@ -12,20 +13,22 @@ struct CommandArgumentsRow: View {
     let onSubmit: () -> Void
 
     var body: some View {
-        HStack(spacing: metrics.spacing.xs) {
-            if let icon {
-                EntryIconView(source: icon)
-                    .frame(width: Self.height(metrics), height: Self.height(metrics))
-            }
-            ForEach(arguments, id: \.name) { argument in
-                ArgumentField(
-                    argument: argument,
-                    text: value(argument.name),
-                    isFocused: focused == argument.name,
-                    onSubmit: onSubmit
-                )
-                .focused($focused, equals: argument.name)
-            }
+        WithObservationTracking {
+            HStack(spacing: metrics.spacing.xs) {
+                        if let icon {
+                            EntryIconView(source: icon)
+                                .frame(width: Self.height(metrics), height: Self.height(metrics))
+                        }
+                        ForEach(arguments, id: \.name) { argument in
+                            ArgumentField(
+                                argument: argument,
+                                text: value(argument.name),
+                                isFocused: focused == argument.name,
+                                onSubmit: onSubmit
+                            )
+                            .focused($focused, equals: argument.name)
+                        }
+                    }
         }
     }
 
@@ -68,30 +71,32 @@ private struct ArgumentField: View {
     let onSubmit: () -> Void
 
     var body: some View {
-        TextField(
-            "", text: $text,
-            prompt: Text(argument.placeholder).foregroundStyle(Theme.Colors.textTertiary)
-        )
-        .textFieldStyle(.plain)
-        .font(metrics.typography.rowTrailing)
-        .tint(.white)
-        .onSubmit(onSubmit)
-        // Sized to the placeholder so a three-argument command still fits.
-        .frame(width: CommandArgumentsRow.fieldWidth(for: argument, metrics: metrics))
-        .padding(.horizontal, metrics.spacing.sm)
-        .frame(height: CommandArgumentsRow.height(metrics))
-        .background(
-            RoundedRectangle(cornerRadius: form.controlCornerRadius, style: .continuous)
-                .fill(ExtensionColors.fieldFill)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: form.controlCornerRadius, style: .continuous)
-                .strokeBorder(
-                    stroke, lineWidth: isFocused ? form.focusStrokeWidth : Theme.Size.hairline)
-        )
-        .help(
-            argument.required
-                ? String(localized: "\(argument.placeholder) — required") : argument.placeholder)
+        WithObservationTracking {
+            TextField(
+                        "", text: $text,
+                        prompt: Text(argument.placeholder).foregroundStyle(Theme.Colors.textTertiary)
+                    )
+                    .textFieldStyle(.plain)
+                    .font(metrics.typography.rowTrailing)
+                    .tint(.white)
+                    .onSubmit(onSubmit)
+                    // Sized to the placeholder so a three-argument command still fits.
+                    .frame(width: CommandArgumentsRow.fieldWidth(for: argument, metrics: metrics))
+                    .padding(.horizontal, metrics.spacing.sm)
+                    .frame(height: CommandArgumentsRow.height(metrics))
+                    .background(
+                        RoundedRectangle(cornerRadius: form.controlCornerRadius, style: .continuous)
+                            .fill(ExtensionColors.fieldFill)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: form.controlCornerRadius, style: .continuous)
+                            .strokeBorder(
+                                stroke, lineWidth: isFocused ? form.focusStrokeWidth : Theme.Size.hairline)
+                    )
+                    .help(
+                        argument.required
+                            ? String(localized: "\(argument.placeholder) — required") : argument.placeholder)
+        }
     }
 
     private var stroke: Color {

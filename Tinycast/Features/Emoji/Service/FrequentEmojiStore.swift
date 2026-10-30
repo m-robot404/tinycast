@@ -1,4 +1,5 @@
 import Foundation
+import ObservationPolyfill
 
 /// One emoji's usage tally, keyed on the base (untoned) glyph.
 struct FrequentEmoji: Codable, Hashable, Sendable {

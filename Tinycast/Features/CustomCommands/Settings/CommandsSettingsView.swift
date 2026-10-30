@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct CommandsSettingsView: View {
     @Environment(CustomCommandStore.self) private var store
@@ -6,69 +7,71 @@ struct CommandsSettingsView: View {
     @Environment(AppSettings.self) private var settings
 
     var body: some View {
-        @Bindable var settings = settings
-        return Form {
-            LauncherCategorySwitchSection(
-                kind: .command, anchor: .commandsCommands, title: "Enable Commands")
+        WithObservationTracking {
+            @Bindable var settings = settings
+                    return Form {
+                        LauncherCategorySwitchSection(
+                            kind: .command, anchor: .commandsCommands, title: "Enable Commands")
 
-            LauncherItemsSection(
-                kind: .command,
-                anchor: .commandsCommands,
-                searchPrompt: "Search commands…",
-                emptyMessage: LocalizedStringResource("commands-empty", defaultValue: "Nothing here yet."))
+                        LauncherItemsSection(
+                            kind: .command,
+                            anchor: .commandsCommands,
+                            searchPrompt: "Search commands…",
+                            emptyMessage: LocalizedStringResource("commands-empty", defaultValue: "Nothing here yet."))
 
-            FeatureSwitchSection(
-                anchor: .commandsCustomCommands,
-                enableTitle: "Enable custom commands",
-                enableSubtitle: """
-                    Run as you in /bin/zsh, or the interpreter a #! line names. \
-                    Use full executable paths.
-                    """,
-                isEnabled: $settings.customCommandsEnabled,
-                showsInLauncher: $settings.customCommandsShowInLauncher)
+                        FeatureSwitchSection(
+                            anchor: .commandsCustomCommands,
+                            enableTitle: "Enable custom commands",
+                            enableSubtitle: """
+                                Run as you in /bin/zsh, or the interpreter a #! line names. \
+                                Use full executable paths.
+                                """,
+                            isEnabled: $settings.customCommandsEnabled,
+                            showsInLauncher: $settings.customCommandsShowInLauncher)
 
-            Section {
-                ForEach(CommandCatalog.entries(ownedBy: .commands)) { entry in
-                    FeatureCommandRow(entry: entry)
-                }
-                if store.commands.isEmpty {
-                    Text("No custom commands yet.")
-                        .foregroundStyle(.secondary)
-                } else {
-                    ForEach(sortedCommands) { command in
-                        CustomCommandSettingsRow(
-                            command: command,
-                            showsInLauncher: settings.customCommandsShowInLauncher,
-                            isEnabled: Binding(
-                                get: { command.isEnabled },
-                                set: {
-                                    coordinator.setCustomCommandEnabled(
-                                        $0, id: command.id)
-                                }),
-                            onEdit: { coordinator.editCustomCommand(command) },
-                            onDelete: { Task { await coordinator.deleteCustomCommand(id: command.id) } })
+                        Section {
+                            ForEach(CommandCatalog.entries(ownedBy: .commands)) { entry in
+                                FeatureCommandRow(entry: entry)
+                            }
+                            if store.commands.isEmpty {
+                                Text("No custom commands yet.")
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                ForEach(sortedCommands) { command in
+                                    CustomCommandSettingsRow(
+                                        command: command,
+                                        showsInLauncher: settings.customCommandsShowInLauncher,
+                                        isEnabled: Binding(
+                                            get: { command.isEnabled },
+                                            set: {
+                                                coordinator.setCustomCommandEnabled(
+                                                    $0, id: command.id)
+                                            }),
+                                        onEdit: { coordinator.editCustomCommand(command) },
+                                        onDelete: { Task { await coordinator.deleteCustomCommand(id: command.id) } })
+                                }
+                            }
+                            Button {
+                                coordinator.editCustomCommand(nil)
+                            } label: {
+                                SettingsRowTitle(.commandsCustomCommands, "Add Custom Command")
+                            }
+                            Button {
+                                Task { await coordinator.importScriptDirectory() }
+                            } label: {
+                                SettingsRowTitle(.commandsCustomCommands, "Import Raycast Scripts")
+                            }
+                        } footer: {
+                            Text("Import reads a folder of Raycast script commands.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .settingsEnabled(settings.customCommandsEnabled)
                     }
-                }
-                Button {
-                    coordinator.editCustomCommand(nil)
-                } label: {
-                    SettingsRowTitle(.commandsCustomCommands, "Add Custom Command")
-                }
-                Button {
-                    Task { await coordinator.importScriptDirectory() }
-                } label: {
-                    SettingsRowTitle(.commandsCustomCommands, "Import Raycast Scripts")
-                }
-            } footer: {
-                Text("Import reads a folder of Raycast script commands.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .settingsEnabled(settings.customCommandsEnabled)
+                    .formStyle(.grouped)
+                    .settingsScrollTarget(.commands)
+                    .releasesFocusOnOutsideClick()
         }
-        .formStyle(.grouped)
-        .settingsScrollTarget(.commands)
-        .releasesFocusOnOutsideClick()
     }
 
     private var sortedCommands: [CustomCommand] {
@@ -86,43 +89,45 @@ private struct CustomCommandSettingsRow: View {
     let onDelete: () -> Void
 
     var body: some View {
-        SettingsRow(title: command.name, subtitle: command.command) {
-            Image(systemName: command.symbol)
-        } trailing: {
-            if !command.showsInRootSearch {
-                Image(systemName: "eye.slash")
-                    .foregroundStyle(.secondary)
-                    .help("Hidden from root search")
-            }
+        WithObservationTracking {
+            SettingsRow(title: command.name, subtitle: command.command) {
+                        Image(systemName: command.symbol)
+                    } trailing: {
+                        if !command.showsInRootSearch {
+                            Image(systemName: "eye.slash")
+                                .foregroundStyle(.secondary)
+                                .help("Hidden from root search")
+                        }
 
-            // An alias only reaches the ranker through the launcher slice, so it dims with it.
-            AliasField(key: command.entryID, name: command.name)
-                .settingsEnabled(command.isEnabled && showsInLauncher && command.showsInRootSearch)
+                        // An alias only reaches the ranker through the launcher slice, so it dims with it.
+                        AliasField(key: command.entryID, name: command.name)
+                            .settingsEnabled(command.isEnabled && showsInLauncher && command.showsInRootSearch)
 
-            // A disabled command's shortcut fires into the funnel's refusal, so it dims too.
-            ShortcutRecorder(action: .customCommand(id: command.id))
-                .settingsEnabled(command.isEnabled)
+                        // A disabled command's shortcut fires into the funnel's refusal, so it dims too.
+                        ShortcutRecorder(action: .customCommand(id: command.id))
+                            .settingsEnabled(command.isEnabled)
 
-            Button(action: onEdit) {
-                Image(systemName: "pencil")
-            }
-            .buttonStyle(.plain)
-            .help("Edit Custom Command")
-            .accessibilityLabel("Edit \(command.name)")
+                        Button(action: onEdit) {
+                            Image(systemName: "pencil")
+                        }
+                        .buttonStyle(.plain)
+                        .help("Edit Custom Command")
+                        .accessibilityLabel("Edit \(command.name)")
 
-            Button(action: onDelete) {
-                Image(systemName: "trash")
-                    .foregroundStyle(.red)
-            }
-            .buttonStyle(.plain)
-            .help("Delete Custom Command")
-            .accessibilityLabel("Delete \(command.name)")
+                        Button(action: onDelete) {
+                            Image(systemName: "trash")
+                                .foregroundStyle(.red)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Delete Custom Command")
+                        .accessibilityLabel("Delete \(command.name)")
 
-            Toggle("", isOn: $isEnabled)
-                .labelsHidden()
-                .toggleStyle(.checkbox)
-                .help("Enabled")
-                .accessibilityLabel("Enable \(command.name)")
+                        Toggle("", isOn: $isEnabled)
+                            .labelsHidden()
+                            .toggleStyle(.checkbox)
+                            .help("Enabled")
+                            .accessibilityLabel("Enable \(command.name)")
+                    }
         }
     }
 }

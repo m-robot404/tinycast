@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 /// A class, so the caller can read the `{argument}` values back after the dialog.
 @MainActor
@@ -21,27 +22,29 @@ struct SnippetArgumentFields: View {
     let state: SnippetArgumentsState
 
     var body: some View {
-        VStack(alignment: .leading, spacing: metrics.spacing.xl) {
-            ForEach(state.arguments, id: \.name) { argument in
-                VStack(alignment: .leading, spacing: metrics.spacing.sm) {
-                    Text(argument.name)
-                        .font(metrics.typography.rowTrailing)
-                        .foregroundStyle(Theme.Colors.textSecondary)
-                    if argument.options.isEmpty {
-                        TextField(
-                            "", text: value(for: argument.name),
-                            prompt: Text(argument.name)
-                        )
-                        .dialogTextField()
-                    } else {
-                        OptionChips(
-                            options: argument.options,
-                            selection: value(for: argument.name))
+        WithObservationTracking {
+            VStack(alignment: .leading, spacing: metrics.spacing.xl) {
+                        ForEach(state.arguments, id: \.name) { argument in
+                            VStack(alignment: .leading, spacing: metrics.spacing.sm) {
+                                Text(argument.name)
+                                    .font(metrics.typography.rowTrailing)
+                                    .foregroundStyle(Theme.Colors.textSecondary)
+                                if argument.options.isEmpty {
+                                    TextField(
+                                        "", text: value(for: argument.name),
+                                        prompt: Text(argument.name)
+                                    )
+                                    .dialogTextField()
+                                } else {
+                                    OptionChips(
+                                        options: argument.options,
+                                        selection: value(for: argument.name))
+                                }
+                            }
+                            .accessibilityElement(children: .contain)
+                            .accessibilityLabel("Snippet argument \(argument.name)")
+                        }
                     }
-                }
-                .accessibilityElement(children: .contain)
-                .accessibilityLabel("Snippet argument \(argument.name)")
-            }
         }
     }
 
@@ -56,10 +59,12 @@ private struct OptionChips: View {
     @Binding var selection: String
 
     var body: some View {
-        // A list too long for one row stacks, rather than running past the dialog's edge.
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: metrics.spacing.md) { chips }
-            VStack(alignment: .leading, spacing: metrics.spacing.md) { chips }
+        WithObservationTracking {
+            // A list too long for one row stacks, rather than running past the dialog's edge.
+                    ViewThatFits(in: .horizontal) {
+                        HStack(spacing: metrics.spacing.md) { chips }
+                        VStack(alignment: .leading, spacing: metrics.spacing.md) { chips }
+                    }
         }
     }
 

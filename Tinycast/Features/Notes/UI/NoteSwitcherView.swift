@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct NoteSwitcherView: View {
     let onContentHeight: (CGFloat) -> Void
@@ -10,32 +11,34 @@ struct NoteSwitcherView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            searchField
-            results
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .glassEffect(.regular, in: surface)
-        .clipShape(surface)
-        .onAppear(perform: focusSearch)
-        .onChange(of: notes.switcherFocusRevision) { _, _ in focusSearch() }
-        .onChange(of: notes.visibleNotes) { _, _ in
-            notes.reconcileSwitcherSelection()
-        }
-        .onKeyPress(.downArrow) {
-            guard !notes.isRenamingSwitcherNote else { return .ignored }
-            notes.moveSwitcherSelection(by: 1)
-            return .handled
-        }
-        .onKeyPress(.upArrow) {
-            guard !notes.isRenamingSwitcherNote else { return .ignored }
-            notes.moveSwitcherSelection(by: -1)
-            return .handled
-        }
-        .onKeyPress(keys: [.return, KeyEquivalent("\u{3}")]) { _ in
-            guard !notes.isRenamingSwitcherNote else { return .ignored }
-            notes.selectSwitcherNote()
-            return .handled
+        WithObservationTracking {
+            VStack(spacing: 0) {
+                        searchField
+                        results
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    .glassEffect(.regular, in: surface)
+                    .clipShape(surface)
+                    .onAppear(perform: focusSearch)
+                    .onChange(of: notes.switcherFocusRevision) { _, _ in focusSearch() }
+                    .onChange(of: notes.visibleNotes) { _, _ in
+                        notes.reconcileSwitcherSelection()
+                    }
+                    .onKeyPress(.downArrow) {
+                        guard !notes.isRenamingSwitcherNote else { return .ignored }
+                        notes.moveSwitcherSelection(by: 1)
+                        return .handled
+                    }
+                    .onKeyPress(.upArrow) {
+                        guard !notes.isRenamingSwitcherNote else { return .ignored }
+                        notes.moveSwitcherSelection(by: -1)
+                        return .handled
+                    }
+                    .onKeyPress(keys: [.return, KeyEquivalent("\u{3}")]) { _ in
+                        guard !notes.isRenamingSwitcherNote else { return .ignored }
+                        notes.selectSwitcherNote()
+                        return .handled
+                    }
         }
     }
 
@@ -150,67 +153,69 @@ private struct NoteSwitcherRow: View {
     }
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.lg) {
-            SymbolImage(name: "text.page", size: Theme.Size.noteGlyph)
-                .foregroundStyle(Theme.Colors.textSecondary)
-                .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
-            if editing {
-                TextField("Note title", text: $titleDraft)
-                    .textFieldStyle(.plain)
-                    .focused($titleFocused)
-                    .onSubmit(onCommitRename)
-                    .onExitCommand(perform: onCancelRename)
-            } else {
-                Text(summary.displayTitle)
-                    .font(Theme.Typography.rowTitle)
-                    .lineLimit(1)
-            }
-            Spacer(minLength: Theme.Spacing.md)
-            if !editing, selected || hovered {
-                rowButton(
-                    title: String(localized: "Rename \(summary.displayTitle)"), symbol: "pencil",
-                    action: onBeginRename)
-                rowButton(
-                    title: String(localized: "Move \(summary.displayTitle) to Trash"), symbol: "trash",
-                    action: onTrash
-                )
-                .foregroundStyle(Theme.Colors.destructive)
-            }
-        }
-        .padding(.horizontal, Theme.Spacing.md)
-        .padding(.vertical, Theme.Spacing.sm)
-        .background(
-            RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
-                .fill(fill)
-        )
-        .contentShape(Rectangle())
-        .onTapGesture {
-            guard !editing else { return }
-            onActivate()
-        }
-        .onHover { hovered = $0 }
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(summary.displayTitle)
-        .accessibilityAddTraits(selected ? .isSelected : [])
-        .accessibilityAction {
-            guard !editing else { return }
-            onActivate()
-        }
-        .accessibilityAction(named: "Rename \(summary.displayTitle)") {
-            guard !editing else { return }
-            onBeginRename()
-        }
-        .accessibilityAction(named: "Move \(summary.displayTitle) to Trash") {
-            guard !editing else { return }
-            onTrash()
-        }
-        .onChange(of: editing) { _, editing in
-            if editing {
-                Task { @MainActor in
-                    await Task.yield()
-                    titleFocused = true
-                }
-            }
+        WithObservationTracking {
+            HStack(spacing: Theme.Spacing.lg) {
+                        SymbolImage(name: "text.page", size: Theme.Size.noteGlyph)
+                            .foregroundStyle(Theme.Colors.textSecondary)
+                            .frame(width: Theme.Size.rowIcon, height: Theme.Size.rowIcon)
+                        if editing {
+                            TextField("Note title", text: $titleDraft)
+                                .textFieldStyle(.plain)
+                                .focused($titleFocused)
+                                .onSubmit(onCommitRename)
+                                .onExitCommand(perform: onCancelRename)
+                        } else {
+                            Text(summary.displayTitle)
+                                .font(Theme.Typography.rowTitle)
+                                .lineLimit(1)
+                        }
+                        Spacer(minLength: Theme.Spacing.md)
+                        if !editing, selected || hovered {
+                            rowButton(
+                                title: String(localized: "Rename \(summary.displayTitle)"), symbol: "pencil",
+                                action: onBeginRename)
+                            rowButton(
+                                title: String(localized: "Move \(summary.displayTitle) to Trash"), symbol: "trash",
+                                action: onTrash
+                            )
+                            .foregroundStyle(Theme.Colors.destructive)
+                        }
+                    }
+                    .padding(.horizontal, Theme.Spacing.md)
+                    .padding(.vertical, Theme.Spacing.sm)
+                    .background(
+                        RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
+                            .fill(fill)
+                    )
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        guard !editing else { return }
+                        onActivate()
+                    }
+                    .onHover { hovered = $0 }
+                    .accessibilityElement(children: .contain)
+                    .accessibilityLabel(summary.displayTitle)
+                    .accessibilityAddTraits(selected ? .isSelected : [])
+                    .accessibilityAction {
+                        guard !editing else { return }
+                        onActivate()
+                    }
+                    .accessibilityAction(named: "Rename \(summary.displayTitle)") {
+                        guard !editing else { return }
+                        onBeginRename()
+                    }
+                    .accessibilityAction(named: "Move \(summary.displayTitle) to Trash") {
+                        guard !editing else { return }
+                        onTrash()
+                    }
+                    .onChange(of: editing) { _, editing in
+                        if editing {
+                            Task { @MainActor in
+                                await Task.yield()
+                                titleFocused = true
+                            }
+                        }
+                    }
         }
     }
 

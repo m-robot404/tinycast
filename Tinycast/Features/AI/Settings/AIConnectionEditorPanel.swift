@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct AIConnectionEditorTarget: Identifiable {
     let connection: AIConnection
@@ -46,124 +47,126 @@ struct AIConnectionEditorPanel: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            SettingsEditorHeader(
-                title: target.isNew ? "Add API Connection" : "Edit API Connection"
-            )
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, Theme.Spacing.dialogInset)
-            .padding(.top, Theme.Spacing.dialogInset)
-            .padding(.bottom, Theme.Spacing.xl)
-
-            Form {
-                Section {
-                    editorField("Name") {
-                        TextField(
-                            "Name", text: $connection.name, prompt: Text("Optional label")
+        WithObservationTracking {
+            VStack(spacing: 0) {
+                        SettingsEditorHeader(
+                            title: target.isNew ? "Add API Connection" : "Edit API Connection"
                         )
-                        .settingsEditorTextField()
-                    }
-                    editorField("Provider") {
-                        Picker("Provider", selection: $connection.provider) {
-                            ForEach(AIProviderKind.allCases) { provider in
-                                Text(provider.title).tag(provider)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, Theme.Spacing.dialogInset)
+                        .padding(.top, Theme.Spacing.dialogInset)
+                        .padding(.bottom, Theme.Spacing.xl)
+
+                        Form {
+                            Section {
+                                editorField("Name") {
+                                    TextField(
+                                        "Name", text: $connection.name, prompt: Text("Optional label")
+                                    )
+                                    .settingsEditorTextField()
+                                }
+                                editorField("Provider") {
+                                    Picker("Provider", selection: $connection.provider) {
+                                        ForEach(AIProviderKind.allCases) { provider in
+                                            Text(provider.title).tag(provider)
+                                        }
+                                    }
+                                    .labelsHidden()
+                                }
+                                editorField("Base URL") {
+                                    TextField(
+                                        "Base URL", text: $connection.baseURL,
+                                        prompt: Text(connection.provider.defaultBaseURL)
+                                    )
+                                    .settingsEditorTextField()
+                                }
+                                editorField("API Key") {
+                                    RevealableSecureField(
+                                        title: String(localized: "API Key"), text: $key,
+                                        prompt: Text(apiKeyPlaceholder)
+                                    )
+                                    .settingsEditorTextField()
+                                }
+                                if storedKeyMatchesTarget {
+                                    Label("A key is already stored in Keychain", systemImage: "lock.fill")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                } else if target.hasStoredKey {
+                                    Label(
+                                        """
+                                        The saved key stays with the endpoint it was saved for. Enter a key for \
+                                        this one.
+                                        """,
+                                        systemImage: "exclamationmark.triangle"
+                                    )
+                                    .font(.caption)
+                                    .foregroundStyle(.orange)
+                                }
+                                if let error {
+                                    Text(error).foregroundStyle(.orange)
+                                }
                             }
-                        }
-                        .labelsHidden()
-                    }
-                    editorField("Base URL") {
-                        TextField(
-                            "Base URL", text: $connection.baseURL,
-                            prompt: Text(connection.provider.defaultBaseURL)
-                        )
-                        .settingsEditorTextField()
-                    }
-                    editorField("API Key") {
-                        RevealableSecureField(
-                            title: String(localized: "API Key"), text: $key,
-                            prompt: Text(apiKeyPlaceholder)
-                        )
-                        .settingsEditorTextField()
-                    }
-                    if storedKeyMatchesTarget {
-                        Label("A key is already stored in Keychain", systemImage: "lock.fill")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    } else if target.hasStoredKey {
-                        Label(
-                            """
-                            The saved key stays with the endpoint it was saved for. Enter a key for \
-                            this one.
-                            """,
-                            systemImage: "exclamationmark.triangle"
-                        )
-                        .font(.caption)
-                        .foregroundStyle(.orange)
-                    }
-                    if let error {
-                        Text(error).foregroundStyle(.orange)
-                    }
-                }
 
-                headersSection
+                            headersSection
 
-                Section {
-                    modelDiscoveryContent
-                } header: {
-                    HStack {
-                        Text("Models")
-                        Spacer()
-                        if !connection.models.isEmpty {
-                            Text("\(connection.models.count) selected")
+                            Section {
+                                modelDiscoveryContent
+                            } header: {
+                                HStack {
+                                    Text("Models")
+                                    Spacer()
+                                    if !connection.models.isEmpty {
+                                        Text("\(connection.models.count) selected")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                            .textCase(nil)
+                                    }
+                                }
+                            } footer: {
+                                Text(
+                                    """
+                                    Search the models available to this key and add one or more. Exact model \
+                                    IDs remain available when discovery is unsupported.
+                                    """
+                                )
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
-                                .textCase(nil)
+                            }
                         }
-                    }
-                } footer: {
-                    Text(
-                        """
-                        Search the models available to this key and add one or more. Exact model \
-                        IDs remain available when discovery is unsupported.
-                        """
-                    )
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                }
-            }
-            .formStyle(.grouped)
-            .scrollContentBackground(.hidden)
+                        .formStyle(.grouped)
+                        .scrollContentBackground(.hidden)
 
-            Divider()
-            HStack(spacing: Theme.Spacing.md) {
-                Button("Cancel", action: onCancel)
-                    .buttonStyle(.modalAction(.cancel))
-                    .keyboardShortcut(.cancelAction)
-                Button("Save", action: save)
-                    .buttonStyle(.modalAction(.primary))
-                    .keyboardShortcut(.defaultAction)
-            }
-            .padding(Theme.Spacing.dialogInset)
-        }
-        .frame(width: 620, height: 540)
-        .settingsEditorPanelSurface()
-        .task(id: discoveryRevision) {
-            try? await Task.sleep(for: .milliseconds(450))
-            guard !Task.isCancelled else { return }
-            await discoverModels()
-        }
-        .onChange(of: key) { discoveryRevision += 1 }
-        .onChange(of: headers) { discoveryRevision += 1 }
-        .onChange(of: connection.baseURL) {
-            connection.dropDeclaredLevels()
-            discoveryRevision += 1
-        }
-        .onChange(of: connection.provider) { oldProvider, newProvider in
-            if connection.baseURL.isEmpty || connection.baseURL == oldProvider.defaultBaseURL {
-                connection.baseURL = newProvider.defaultBaseURL
-            }
-            connection.reasoningOptions = nil
-            discoveryRevision += 1
+                        Divider()
+                        HStack(spacing: Theme.Spacing.md) {
+                            Button("Cancel", action: onCancel)
+                                .buttonStyle(.modalAction(.cancel))
+                                .keyboardShortcut(.cancelAction)
+                            Button("Save", action: save)
+                                .buttonStyle(.modalAction(.primary))
+                                .keyboardShortcut(.defaultAction)
+                        }
+                        .padding(Theme.Spacing.dialogInset)
+                    }
+                    .frame(width: 620, height: 540)
+                    .settingsEditorPanelSurface()
+                    .task(id: discoveryRevision) {
+                        try? await Task.sleep(for: .milliseconds(450))
+                        guard !Task.isCancelled else { return }
+                        await discoverModels()
+                    }
+                    .onChange(of: key) { discoveryRevision += 1 }
+                    .onChange(of: headers) { discoveryRevision += 1 }
+                    .onChange(of: connection.baseURL) {
+                        connection.dropDeclaredLevels()
+                        discoveryRevision += 1
+                    }
+                    .onChange(of: connection.provider) { oldProvider, newProvider in
+                        if connection.baseURL.isEmpty || connection.baseURL == oldProvider.defaultBaseURL {
+                            connection.baseURL = newProvider.defaultBaseURL
+                        }
+                        connection.reasoningOptions = nil
+                        discoveryRevision += 1
+                    }
         }
     }
 

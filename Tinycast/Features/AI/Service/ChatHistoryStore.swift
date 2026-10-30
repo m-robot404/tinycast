@@ -1,4 +1,5 @@
 import Foundation
+import ObservationPolyfill
 import Observation
 import SQLite3
 

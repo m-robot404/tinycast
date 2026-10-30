@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 /// File-scoped so a row and the cap that counts rows read one number.
 private struct Metrics {
@@ -64,33 +65,35 @@ struct ExtensionActionsPanel: View {
     private var hairline: CGFloat { 1 / displayScale }
 
     var body: some View {
-        let shape = UnevenRoundedRectangle(
-            topLeadingRadius: metrics.radius.menuPanel,
-            bottomLeadingRadius: metrics.radius.menuPanel,
-            bottomTrailingRadius: metrics.size.menuButton / 2,
-            topTrailingRadius: metrics.radius.menuPanel,
-            style: .continuous)
-        return VStack(spacing: 0) {
-            listContent
-            Rectangle()
-                .fill(Theme.Colors.separator)
-                .frame(height: hairline)
-                .accessibilityHidden(true)
-            ExtensionMenuSearchField(
-                placeholder: String(localized: "Search for actions…"), height: panel.rowHeight,
-                verticalOffset: -metrics.spacing.xxs / 2)
+        WithObservationTracking {
+            let shape = UnevenRoundedRectangle(
+                        topLeadingRadius: metrics.radius.menuPanel,
+                        bottomLeadingRadius: metrics.radius.menuPanel,
+                        bottomTrailingRadius: metrics.size.menuButton / 2,
+                        topTrailingRadius: metrics.radius.menuPanel,
+                        style: .continuous)
+                    return VStack(spacing: 0) {
+                        listContent
+                        Rectangle()
+                            .fill(Theme.Colors.separator)
+                            .frame(height: hairline)
+                            .accessibilityHidden(true)
+                        ExtensionMenuSearchField(
+                            placeholder: String(localized: "Search for actions…"), height: panel.rowHeight,
+                            verticalOffset: -metrics.spacing.xxs / 2)
+                    }
+                    // The panel holds focus while open, so the screen's own shortcut keys never see these.
+                    .onKeyPress(phases: .down) { press in
+                        guard !press.modifiers.isEmpty,
+                            let row = shortcutRow(
+                                ASCIIKeyboardLayout.keyEquivalent(fallingBackTo: press.key), press.modifiers)
+                        else { return .ignored }
+                        onActivate(row)
+                        return .handled
+                    }
+                    .frame(width: panel.width)
+                    .glassEffect(.regular, in: shape)
         }
-        // The panel holds focus while open, so the screen's own shortcut keys never see these.
-        .onKeyPress(phases: .down) { press in
-            guard !press.modifiers.isEmpty,
-                let row = shortcutRow(
-                    ASCIIKeyboardLayout.keyEquivalent(fallingBackTo: press.key), press.modifiers)
-            else { return .ignored }
-            onActivate(row)
-            return .handled
-        }
-        .frame(width: panel.width)
-        .glassEffect(.regular, in: shape)
     }
 
     @ViewBuilder
@@ -199,33 +202,35 @@ private struct ExtensionActionRow: View {
     private var panel: Metrics { Metrics(interface: metrics) }
 
     var body: some View {
-        Button(action: onActivate) {
-            HStack(spacing: metrics.spacing.md) {
-                ExtensionIconView(
-                    resolved: item.icon, size: metrics.size.menuIcon, usesMenuSymbolStyle: true)
-                Text(item.title)
-                    .font(metrics.typography.menuRow)
-                    .foregroundStyle(item.isDestructive ? Color.red : Color.primary)
-                    .lineLimit(1)
-                Spacer(minLength: metrics.spacing.sm)
-                HStack(spacing: metrics.spacing.xxs) {
-                    ForEach(Array(item.shortcutCaps.enumerated()), id: \.offset) { _, cap in
-                        KeyCapChip(text: cap, style: .outline)
+        WithObservationTracking {
+            Button(action: onActivate) {
+                        HStack(spacing: metrics.spacing.md) {
+                            ExtensionIconView(
+                                resolved: item.icon, size: metrics.size.menuIcon, usesMenuSymbolStyle: true)
+                            Text(item.title)
+                                .font(metrics.typography.menuRow)
+                                .foregroundStyle(item.isDestructive ? Color.red : Color.primary)
+                                .lineLimit(1)
+                            Spacer(minLength: metrics.spacing.sm)
+                            HStack(spacing: metrics.spacing.xxs) {
+                                ForEach(Array(item.shortcutCaps.enumerated()), id: \.offset) { _, cap in
+                                    KeyCapChip(text: cap, style: .outline)
+                                }
+                            }
+                        }
+                        .padding(.horizontal, metrics.spacing.md)
+                        // Fixed, not padded: the height maths above counts rows, so a row is one exact height.
+                        .frame(
+                            maxWidth: .infinity, minHeight: panel.rowHeight, maxHeight: panel.rowHeight,
+                            alignment: .leading
+                        )
+                        .contentShape(Rectangle())
+                        .background(
+                            RoundedRectangle(cornerRadius: metrics.radius.menuRow, style: .continuous)
+                                .fill(selected ? Theme.Colors.menuHover : Color.clear)
+                        )
                     }
-                }
-            }
-            .padding(.horizontal, metrics.spacing.md)
-            // Fixed, not padded: the height maths above counts rows, so a row is one exact height.
-            .frame(
-                maxWidth: .infinity, minHeight: panel.rowHeight, maxHeight: panel.rowHeight,
-                alignment: .leading
-            )
-            .contentShape(Rectangle())
-            .background(
-                RoundedRectangle(cornerRadius: metrics.radius.menuRow, style: .continuous)
-                    .fill(selected ? Theme.Colors.menuHover : Color.clear)
-            )
+                    .buttonStyle(.plain)
         }
-        .buttonStyle(.plain)
     }
 }

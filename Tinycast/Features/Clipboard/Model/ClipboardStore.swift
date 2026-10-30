@@ -1,4 +1,5 @@
 import Foundation
+import ObservationPolyfill
 import SQLite3
 
 // Spelled as the C macro in sqlite3.h, which isn't imported into Swift.

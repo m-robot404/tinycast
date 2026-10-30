@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct CustomCommandEditorView: View {
     @Bindable var editor: CustomCommandEditorSession
@@ -19,94 +20,96 @@ struct CustomCommandEditorView: View {
     }
 
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                VStack(spacing: metrics.spacing.xxl) {
-                    FormRow("Name & Icon") { nameField }.id(CustomCommandEditorSession.Field.name)
-                    FormRow("Command", alignment: .top) {
-                        VStack(alignment: .leading, spacing: metrics.spacing.md) {
-                            FormTextArea(
-                                text: $editor.shellCommand, selection: $editor.selection,
-                                focused: focusBinding(.command), minimumHeight: metrics.size.textAreaUnit * 2,
-                                label: String(localized: "Shell command"), isCode: true,
-                                moveFocus: editor.advanceFocus
-                            )
-                            .formFieldChrome(focused: focusedField == .command)
-                            detail(String(localized: "Example: /usr/bin/pmset displaysleepnow"))
-                        }
-                    }
-                    .id(CustomCommandEditorSession.Field.command)
-                    FormRow("Run In", alignment: .top) { workingDirectoryField }
-                        .id(CustomCommandEditorSession.Field.workingDirectory)
-                    FormRow(
-                        "Arguments", alignment: .top,
-                        labelInset: editor.arguments.isEmpty ? 0 : metrics.spacing.lg
-                    ) { argumentsSection }
-                    FormRow {
-                        VStack(alignment: .leading, spacing: metrics.spacing.lg) {
-                            option(
-                                String(localized: "Show in root search"),
-                                detail: String(
-                                    localized: """
-                                        List this command alongside apps and other commands.
-                                        """),
-                                value: $editor.showsInRootSearch, focus: .rootSearch)
-                            option(
-                                String(localized: "Load shell environment"),
-                                detail: String(
-                                    localized: """
-                                        Sources ~/.zshrc for aliases, functions and PATH. Slower to start.
-                                        """),
-                                value: $editor.loadsShellEnvironment, focus: .shellEnvironment)
-                            option(
-                                String(localized: "Needs confirmation"),
-                                detail: String(localized: "Ask before running this command."),
-                                value: $editor.requiresConfirmation, focus: .confirmation)
-                            option(
-                                String(localized: "Show confirmation"),
-                                detail: String(localized: "Confirm on screen after the command succeeds."),
-                                value: $editor.showsConfirmation, focus: .successConfirmation)
-                            option(
-                                String(localized: "Show output"),
-                                detail: String(
-                                    localized: """
-                                        Open a window with everything the command prints.
-                                        """),
-                                value: $editor.showsOutput, focus: .output)
-                            if let errorMessage = editor.errorMessage {
-                                detail(errorMessage).foregroundStyle(.orange)
+        WithObservationTracking {
+            ScrollViewReader { proxy in
+                        ScrollView {
+                            VStack(spacing: metrics.spacing.xxl) {
+                                FormRow("Name & Icon") { nameField }.id(CustomCommandEditorSession.Field.name)
+                                FormRow("Command", alignment: .top) {
+                                    VStack(alignment: .leading, spacing: metrics.spacing.md) {
+                                        FormTextArea(
+                                            text: $editor.shellCommand, selection: $editor.selection,
+                                            focused: focusBinding(.command), minimumHeight: metrics.size.textAreaUnit * 2,
+                                            label: String(localized: "Shell command"), isCode: true,
+                                            moveFocus: editor.advanceFocus
+                                        )
+                                        .formFieldChrome(focused: focusedField == .command)
+                                        detail(String(localized: "Example: /usr/bin/pmset displaysleepnow"))
+                                    }
+                                }
+                                .id(CustomCommandEditorSession.Field.command)
+                                FormRow("Run In", alignment: .top) { workingDirectoryField }
+                                    .id(CustomCommandEditorSession.Field.workingDirectory)
+                                FormRow(
+                                    "Arguments", alignment: .top,
+                                    labelInset: editor.arguments.isEmpty ? 0 : metrics.spacing.lg
+                                ) { argumentsSection }
+                                FormRow {
+                                    VStack(alignment: .leading, spacing: metrics.spacing.lg) {
+                                        option(
+                                            String(localized: "Show in root search"),
+                                            detail: String(
+                                                localized: """
+                                                    List this command alongside apps and other commands.
+                                                    """),
+                                            value: $editor.showsInRootSearch, focus: .rootSearch)
+                                        option(
+                                            String(localized: "Load shell environment"),
+                                            detail: String(
+                                                localized: """
+                                                    Sources ~/.zshrc for aliases, functions and PATH. Slower to start.
+                                                    """),
+                                            value: $editor.loadsShellEnvironment, focus: .shellEnvironment)
+                                        option(
+                                            String(localized: "Needs confirmation"),
+                                            detail: String(localized: "Ask before running this command."),
+                                            value: $editor.requiresConfirmation, focus: .confirmation)
+                                        option(
+                                            String(localized: "Show confirmation"),
+                                            detail: String(localized: "Confirm on screen after the command succeeds."),
+                                            value: $editor.showsConfirmation, focus: .successConfirmation)
+                                        option(
+                                            String(localized: "Show output"),
+                                            detail: String(
+                                                localized: """
+                                                    Open a window with everything the command prints.
+                                                    """),
+                                            value: $editor.showsOutput, focus: .output)
+                                        if let errorMessage = editor.errorMessage {
+                                            detail(errorMessage).foregroundStyle(.orange)
+                                        }
+                                    }
+                                }
                             }
+                            .font(metrics.typography.rowTitle)
+                            .foregroundStyle(Theme.Colors.textPrimary)
+                            .padding(.horizontal, metrics.spacing.xxxl * 2)
+                            .padding(.vertical, metrics.spacing.md)
+                        }
+                        .scrollClipDisabled()
+                        .edgeDissolve()
+                        .focusEffectDisabled()
+                        .task(id: FocusRequest(field: editor.focusedField, token: palette.focusToken)) {
+                            palette.noteEditingField(true)
+                            let field = editor.focusedField
+                            focusedControl = isTextField(field) ? nil : field
+                            await Task.yield()
+                            guard !Task.isCancelled else { return }
+                            proxy.scrollTo(scrollTarget(for: field))
+                            focusedField = field
+                        }
+                        .onChange(of: focusedField) { _, field in
+                            if let field, editor.focusedField != field { editor.focusedField = field }
+                            focusedControl = field.flatMap { isTextField($0) ? nil : $0 }
+                        }
+                        .onChange(of: focusedControl) { _, field in
+                            if let field { focusedField = field }
+                        }
+                        .onDisappear {
+                            coordinator.editorDidClose(editor)
+                            palette.noteEditingField(false)
                         }
                     }
-                }
-                .font(metrics.typography.rowTitle)
-                .foregroundStyle(Theme.Colors.textPrimary)
-                .padding(.horizontal, metrics.spacing.xxxl * 2)
-                .padding(.vertical, metrics.spacing.md)
-            }
-            .scrollClipDisabled()
-            .edgeDissolve()
-            .focusEffectDisabled()
-            .task(id: FocusRequest(field: editor.focusedField, token: palette.focusToken)) {
-                palette.noteEditingField(true)
-                let field = editor.focusedField
-                focusedControl = isTextField(field) ? nil : field
-                await Task.yield()
-                guard !Task.isCancelled else { return }
-                proxy.scrollTo(scrollTarget(for: field))
-                focusedField = field
-            }
-            .onChange(of: focusedField) { _, field in
-                if let field, editor.focusedField != field { editor.focusedField = field }
-                focusedControl = field.flatMap { isTextField($0) ? nil : $0 }
-            }
-            .onChange(of: focusedControl) { _, field in
-                if let field { focusedField = field }
-            }
-            .onDisappear {
-                coordinator.editorDidClose(editor)
-                palette.noteEditingField(false)
-            }
         }
     }
 

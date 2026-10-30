@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 import SwiftUI
 
 /// A picker's own window, so its glass samples the desktop exactly as the ⌘K menu's does.

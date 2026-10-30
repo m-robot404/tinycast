@@ -1,4 +1,5 @@
 import Foundation
+import ObservationPolyfill
 
 /// The custom-size library, as JSON in `UserDefaults`. Authored data, so a bad record is cleaned.
 @MainActor

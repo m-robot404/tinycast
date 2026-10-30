@@ -1,4 +1,5 @@
 import Foundation
+import ObservationPolyfill
 
 /// The live level behind the slider and bar, published so a repeat refreshes in place.
 @Observable

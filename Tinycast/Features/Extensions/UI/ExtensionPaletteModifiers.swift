@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 /// An action's own shortcut, matched before the palette's bindings see it.
 struct ExtensionShortcutKeys: ViewModifier {

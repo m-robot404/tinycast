@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct CameraPreviewView: View {
     let meeting: MeetingEvent
@@ -8,17 +9,19 @@ struct CameraPreviewView: View {
     let onCancel: () -> Void
 
     var body: some View {
-        VStack(spacing: 0) {
-            CameraStage(feed: feed)
-                .frame(
-                    width: Theme.Size.cameraPreview.width,
-                    height: Theme.Size.cameraPreview.height)
-            footer
+        WithObservationTracking {
+            VStack(spacing: 0) {
+                        CameraStage(feed: feed)
+                            .frame(
+                                width: Theme.Size.cameraPreview.width,
+                                height: Theme.Size.cameraPreview.height)
+                        footer
+                    }
+                    .frame(width: Theme.Size.cameraPreview.width)
+                    .background(Theme.Colors.panelScrim)
+                    .background(GlassEffectView())
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.dialog, style: .continuous))
         }
-        .frame(width: Theme.Size.cameraPreview.width)
-        .background(Theme.Colors.panelScrim)
-        .background(GlassEffectView())
-        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.dialog, style: .continuous))
     }
 
     private var footer: some View {

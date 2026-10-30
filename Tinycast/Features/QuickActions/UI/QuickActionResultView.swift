@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct QuickActionResultView: View {
 
@@ -18,31 +19,33 @@ struct QuickActionResultView: View {
 
     /// Explicit overlays, not `safeAreaBar`: that lays its bars over the content instead of inset.
     var body: some View {
-        ScrollView {
-            body(for: state.phase)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, metrics.spacing.xxl)
-                // A `ScrollView` has no ideal height, so the frame below is set, not merely capped.
-                .fixedSize(horizontal: false, vertical: true)
-                // Measured before the insets, so `isScrollable` cannot depend on its own answer.
-                .onGeometryChange(for: CGFloat.self) {
-                    $0.size.height
-                } action: {
-                    contentHeight = $0
-                }
-                .padding(.top, inset(headerHeight))
-                .padding(.bottom, inset(footerHeight))
+        WithObservationTracking {
+            ScrollView {
+                        body(for: state.phase)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, metrics.spacing.xxl)
+                            // A `ScrollView` has no ideal height, so the frame below is set, not merely capped.
+                            .fixedSize(horizontal: false, vertical: true)
+                            // Measured before the insets, so `isScrollable` cannot depend on its own answer.
+                            .onGeometryChange(for: CGFloat.self) {
+                                $0.size.height
+                            } action: {
+                                contentHeight = $0
+                            }
+                            .padding(.top, inset(headerHeight))
+                            .padding(.bottom, inset(footerHeight))
+                    }
+                    .scrollBounceBehavior(.basedOnSize)
+                    .mask(scrollFade)
+                    .overlay(alignment: .top) { measured(header) { headerHeight = $0 } }
+                    .overlay(alignment: .bottom) { measured(footer) { footerHeight = $0 } }
+                    .frame(width: metrics.size.quickActionPanel, height: panelHeight)
+                    .background(Theme.Colors.panelScrim)
+                    .background(GlassEffectView())
+                    .clipShape(RoundedRectangle(cornerRadius: metrics.radius.dialog, style: .continuous))
+                    // Reported, not measured: the frame above is ours, so reading it back would feed itself.
+                    .onChange(of: panelHeight, initial: true) { onHeight(panelHeight) }
         }
-        .scrollBounceBehavior(.basedOnSize)
-        .mask(scrollFade)
-        .overlay(alignment: .top) { measured(header) { headerHeight = $0 } }
-        .overlay(alignment: .bottom) { measured(footer) { footerHeight = $0 } }
-        .frame(width: metrics.size.quickActionPanel, height: panelHeight)
-        .background(Theme.Colors.panelScrim)
-        .background(GlassEffectView())
-        .clipShape(RoundedRectangle(cornerRadius: metrics.radius.dialog, style: .continuous))
-        // Reported, not measured: the frame above is ours, so reading it back would feed itself.
-        .onChange(of: panelHeight, initial: true) { onHeight(panelHeight) }
     }
 
     private func measured(_ bar: some View, action: @escaping (CGFloat) -> Void) -> some View {

@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 /// The launcher's colour card, built from the calculator card's parts so it reads as one answer.
 struct ColorCard: View {
@@ -13,22 +14,24 @@ struct ColorCard: View {
     private var primary: ColorFormat { ColorFormat.primary(for: color) }
 
     var body: some View {
-        HStack(spacing: 0) {
-            LeadCardColumn(
-                text: AttributedString(primary.string(for: color)), badge: primary.title)
-            Image(systemName: "arrow.right")
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(.tertiary)
-            // Stretched to the value column rather than sized: no notation is a fixed height.
-            ColorSwatch(color: color, cornerRadius: metrics.radius.card)
-                .frame(width: Self.swatchWidth)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .padding(.horizontal, metrics.spacing.md)
+        WithObservationTracking {
+            HStack(spacing: 0) {
+                        LeadCardColumn(
+                            text: AttributedString(primary.string(for: color)), badge: primary.title)
+                        Image(systemName: "arrow.right")
+                            .font(.title3.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                        // Stretched to the value column rather than sized: no notation is a fixed height.
+                        ColorSwatch(color: color, cornerRadius: metrics.radius.card)
+                            .frame(width: Self.swatchWidth)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .padding(.horizontal, metrics.spacing.md)
+                    }
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, metrics.spacing.xl)
+                    .padding(.vertical, metrics.spacing.xxxl)
+                    .leadCard(selected: selected)
         }
-        .fixedSize(horizontal: false, vertical: true)
-        .padding(.horizontal, metrics.spacing.xl)
-        .padding(.vertical, metrics.spacing.xxxl)
-        .leadCard(selected: selected)
     }
 }
 

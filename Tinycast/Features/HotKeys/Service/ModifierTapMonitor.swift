@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 import Carbon.HIToolbox
 
 /// C entry point: reduce to Sendable scalars, then cross in. Listen-only, so nothing changes.

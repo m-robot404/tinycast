@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct EmptyResults: View {
     let text: String
@@ -6,18 +7,20 @@ struct EmptyResults: View {
     var systemImage = "magnifyingglass"
 
     var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: systemImage).font(.largeTitle)
-                .symbolRenderingMode(.hierarchical).foregroundStyle(.tertiary)
-            Text(text).foregroundStyle(.secondary)
-            if let detail {
-                Text(detail)
-                    .font(.callout)
-                    .foregroundStyle(.tertiary)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: 360)
-            }
+        WithObservationTracking {
+            VStack(spacing: 8) {
+                        Image(systemName: systemImage).font(.largeTitle)
+                            .symbolRenderingMode(.hierarchical).foregroundStyle(.tertiary)
+                        Text(text).foregroundStyle(.secondary)
+                        if let detail {
+                            Text(detail)
+                                .font(.callout)
+                                .foregroundStyle(.tertiary)
+                                .multilineTextAlignment(.center)
+                                .frame(maxWidth: 360)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }

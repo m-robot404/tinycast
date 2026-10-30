@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 import Observation
 
 /// The single funnel for every Quick Action, however it was started.

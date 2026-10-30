@@ -1,4 +1,5 @@
 import AVKit
+import ObservationPolyfill
 import SwiftUI
 
 struct FilePreviewStage: View {
@@ -16,10 +17,12 @@ struct FilePreviewStage: View {
     private var url: URL { URL(filePath: path, directoryHint: .inferFromPath) }
 
     var body: some View {
-        stage.task(id: path) {
-            let loaded = await Self.probe(path)
-            guard !Task.isCancelled else { return }
-            probe = loaded
+        WithObservationTracking {
+            stage.task(id: path) {
+                        let loaded = await Self.probe(path)
+                        guard !Task.isCancelled else { return }
+                        probe = loaded
+                    }
         }
     }
 
@@ -49,15 +52,17 @@ struct FilePreviewStage: View {
 private struct MissingFileStage: View {
     @Environment(\.metrics) private var metrics
     var body: some View {
-        VStack(spacing: metrics.spacing.sm) {
-            Image(systemName: "doc.badge.exclamationmark")
-                .font(.system(.largeTitle))
-                .symbolRenderingMode(.hierarchical)
-            Text("File is no longer available")
-                .font(metrics.typography.rowTrailing)
+        WithObservationTracking {
+            VStack(spacing: metrics.spacing.sm) {
+                        Image(systemName: "doc.badge.exclamationmark")
+                            .font(.system(.largeTitle))
+                            .symbolRenderingMode(.hierarchical)
+                        Text("File is no longer available")
+                            .font(metrics.typography.rowTrailing)
+                    }
+                    .foregroundStyle(.tertiary)
+                    .frame(maxWidth: .infinity)
         }
-        .foregroundStyle(.tertiary)
-        .frame(maxWidth: .infinity)
     }
 }
 
@@ -71,32 +76,34 @@ private struct FileThumbnailStage: View {
     @State private var image: NSImage?
 
     var body: some View {
-        Group {
-            if let image {
-                Image(nsImage: image)
-                    .resizable()
-                    .scaledToFit()
-                    .clipShape(RoundedRectangle(cornerRadius: metrics.radius.card, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: metrics.radius.card, style: .continuous)
-                            .strokeBorder(Theme.Colors.cardStroke, lineWidth: 1)
-                    )
-            } else {
-                Image(systemName: glyph)
-                    .font(.system(.largeTitle))
-                    .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(.tertiary)
-            }
-        }
-        .task(id: url) {
-            if let hit = FilePreviewThumbnail.cached(url, maxPixel: maxPixel) {
-                image = hit
-                return
-            }
-            image = nil
-            let loaded = await FilePreviewThumbnail.loadAsync(url, maxPixel: maxPixel)
-            guard !Task.isCancelled else { return }
-            image = loaded
+        WithObservationTracking {
+            Group {
+                        if let image {
+                            Image(nsImage: image)
+                                .resizable()
+                                .scaledToFit()
+                                .clipShape(RoundedRectangle(cornerRadius: metrics.radius.card, style: .continuous))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: metrics.radius.card, style: .continuous)
+                                        .strokeBorder(Theme.Colors.cardStroke, lineWidth: 1)
+                                )
+                        } else {
+                            Image(systemName: glyph)
+                                .font(.system(.largeTitle))
+                                .symbolRenderingMode(.hierarchical)
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                    .task(id: url) {
+                        if let hit = FilePreviewThumbnail.cached(url, maxPixel: maxPixel) {
+                            image = hit
+                            return
+                        }
+                        image = nil
+                        let loaded = await FilePreviewThumbnail.loadAsync(url, maxPixel: maxPixel)
+                        guard !Task.isCancelled else { return }
+                        image = loaded
+                    }
         }
     }
 }
@@ -117,17 +124,19 @@ private struct MediaPreviewPlayer: View {
     }
 
     var body: some View {
-        PlayerSurface(player: player)
-            .background { if isAudio { AudioPoster(url: url) } }
-            // A cap, not a height: a fixed one outgrows the pane and pushes the panel taller.
-            .frame(maxHeight: metrics.size.clipboardMediaHeight)
-            .clipShape(RoundedRectangle(cornerRadius: metrics.radius.card, style: .continuous))
-            .task(id: PlaybackKey(url: url, isVisible: palette.isVisible)) {
-                stop()
-                guard palette.isVisible else { return }
-                player = AVPlayer(url: url)
-            }
-            .onDisappear(perform: stop)
+        WithObservationTracking {
+            PlayerSurface(player: player)
+                        .background { if isAudio { AudioPoster(url: url) } }
+                        // A cap, not a height: a fixed one outgrows the pane and pushes the panel taller.
+                        .frame(maxHeight: metrics.size.clipboardMediaHeight)
+                        .clipShape(RoundedRectangle(cornerRadius: metrics.radius.card, style: .continuous))
+                        .task(id: PlaybackKey(url: url, isVisible: palette.isVisible)) {
+                            stop()
+                            guard palette.isVisible else { return }
+                            player = AVPlayer(url: url)
+                        }
+                        .onDisappear(perform: stop)
+        }
     }
 
     /// Dropping the item too: a paused player still holds its asset reader and decoder open.
@@ -172,20 +181,22 @@ private struct AudioPoster: View {
     @State private var image: NSImage?
 
     var body: some View {
-        Group {
-            if let image {
-                Image(nsImage: image).resizable().scaledToFit()
-            } else {
-                Image(systemName: "waveform")
-                    .font(.system(.largeTitle))
-                    .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(.tertiary)
-            }
-        }
-        .task(id: url) {
-            let loaded = await FilePreviewThumbnail.loadAsync(url, maxPixel: 300)
-            guard !Task.isCancelled else { return }
-            image = loaded
+        WithObservationTracking {
+            Group {
+                        if let image {
+                            Image(nsImage: image).resizable().scaledToFit()
+                        } else {
+                            Image(systemName: "waveform")
+                                .font(.system(.largeTitle))
+                                .symbolRenderingMode(.hierarchical)
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                    .task(id: url) {
+                        let loaded = await FilePreviewThumbnail.loadAsync(url, maxPixel: 300)
+                        guard !Task.isCancelled else { return }
+                        image = loaded
+                    }
         }
     }
 }

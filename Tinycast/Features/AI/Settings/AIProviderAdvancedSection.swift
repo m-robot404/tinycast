@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 /// An installed tool's command path and launch variables, saved as each field is left.
 struct AIProviderAdvancedSection: View {
@@ -27,49 +28,51 @@ struct AIProviderAdvancedSection: View {
     }
 
     var body: some View {
-        Section {
-            LabeledContent {
-                HStack(spacing: Theme.Spacing.sm) {
-                    TextField("Command path", text: $path, prompt: Text("Automatic"))
-                        .labelsHidden()
-                        .font(.callout.monospaced())
-                        .autocorrectionDisabled()
-                        .focused($focus, equals: .path)
-                        .onSubmit(save)
-                    Button("Choose…", action: choose)
-                        .fixedSize()
-                }
-            } label: {
-                Text("Command path")
-                Text("Empty finds \(kind.command) the way Terminal does.")
-            }
-            .task(id: kind) { load() }
-            .onChange(of: focus) { old, new in
-                if old != nil, old != new { save() }
-            }
-        } header: {
-            Text("Command")
-        }
-        Section {
-            LabeledContent {
-                Button("Add Variable", action: addVariable)
-                    .fixedSize()
-                    .disabled(readFailed)
-            } label: {
-                Text("Variables")
-                Text("Set for \(kind.title) only, each time it starts.")
-            }
-            ForEach($variables) { $variable in
-                variableRow($variable)
-            }
-        } header: {
-            Text("Environment")
-        } footer: {
-            Text(footer)
-                .font(.caption)
-                .foregroundStyle(
-                    saveFailed || readFailed
-                        ? AnyShapeStyle(Theme.Colors.destructive) : AnyShapeStyle(.secondary))
+        WithObservationTracking {
+            Section {
+                        LabeledContent {
+                            HStack(spacing: Theme.Spacing.sm) {
+                                TextField("Command path", text: $path, prompt: Text("Automatic"))
+                                    .labelsHidden()
+                                    .font(.callout.monospaced())
+                                    .autocorrectionDisabled()
+                                    .focused($focus, equals: .path)
+                                    .onSubmit(save)
+                                Button("Choose…", action: choose)
+                                    .fixedSize()
+                            }
+                        } label: {
+                            Text("Command path")
+                            Text("Empty finds \(kind.command) the way Terminal does.")
+                        }
+                        .task(id: kind) { load() }
+                        .onChange(of: focus) { old, new in
+                            if old != nil, old != new { save() }
+                        }
+                    } header: {
+                        Text("Command")
+                    }
+                    Section {
+                        LabeledContent {
+                            Button("Add Variable", action: addVariable)
+                                .fixedSize()
+                                .disabled(readFailed)
+                        } label: {
+                            Text("Variables")
+                            Text("Set for \(kind.title) only, each time it starts.")
+                        }
+                        ForEach($variables) { $variable in
+                            variableRow($variable)
+                        }
+                    } header: {
+                        Text("Environment")
+                    } footer: {
+                        Text(footer)
+                            .font(.caption)
+                            .foregroundStyle(
+                                saveFailed || readFailed
+                                    ? AnyShapeStyle(Theme.Colors.destructive) : AnyShapeStyle(.secondary))
+                    }
         }
     }
 

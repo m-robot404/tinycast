@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 /// Our own choice: a menu-style `Picker` drops an AppKit popover onto a vibrancy surface.
 struct DialogChip: View {
@@ -15,18 +16,20 @@ struct DialogChip: View {
     }
 
     var body: some View {
-        Button(action: onTap) {
-            Text(title)
-                .font(metrics.typography.rowTrailing)
-                .foregroundStyle(selected ? Theme.Colors.textPrimary : Theme.Colors.textSecondary)
-                .padding(.horizontal, metrics.spacing.lg)
-                .frame(height: metrics.size.barButtonHeight)
-                .contentShape(Capsule())
-                .background(Capsule().fill(fill))
+        WithObservationTracking {
+            Button(action: onTap) {
+                        Text(title)
+                            .font(metrics.typography.rowTrailing)
+                            .foregroundStyle(selected ? Theme.Colors.textPrimary : Theme.Colors.textSecondary)
+                            .padding(.horizontal, metrics.spacing.lg)
+                            .frame(height: metrics.size.barButtonHeight)
+                            .contentShape(Capsule())
+                            .background(Capsule().fill(fill))
+                    }
+                    .buttonStyle(.plain)
+                    .onHover { hovered = $0 }
+                    .accessibilityLabel(title)
+                    .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
         }
-        .buttonStyle(.plain)
-        .onHover { hovered = $0 }
-        .accessibilityLabel(title)
-        .accessibilityAddTraits(selected ? [.isButton, .isSelected] : .isButton)
     }
 }

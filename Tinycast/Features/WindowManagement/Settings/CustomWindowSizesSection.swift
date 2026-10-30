@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct CustomWindowSizesSection: View {
     let onEdit: (CustomWindowSize?) -> Void
@@ -8,21 +9,23 @@ struct CustomWindowSizesSection: View {
     @Environment(AppSettings.self) private var settings
 
     var body: some View {
-        Section {
-            ForEach(store.sizes) { size in
-                CustomWindowSizeRow(
-                    size: size,
-                    showsInLauncher: settings.windowManagementShowInLauncher,
-                    onEdit: { onEdit(size) },
-                    onDelete: { delete(size) })
-            }
-            Button {
-                onEdit(nil)
-            } label: {
-                SettingsRowTitle(.windowManagementCustomSizes, "New Custom Size")
-            }
-        } header: {
-            SettingsSectionHeader(.windowManagementCustomSizes)
+        WithObservationTracking {
+            Section {
+                        ForEach(store.sizes) { size in
+                            CustomWindowSizeRow(
+                                size: size,
+                                showsInLauncher: settings.windowManagementShowInLauncher,
+                                onEdit: { onEdit(size) },
+                                onDelete: { delete(size) })
+                        }
+                        Button {
+                            onEdit(nil)
+                        } label: {
+                            SettingsRowTitle(.windowManagementCustomSizes, "New Custom Size")
+                        }
+                    } header: {
+                        SettingsSectionHeader(.windowManagementCustomSizes)
+                    }
         }
     }
 
@@ -40,38 +43,40 @@ private struct CustomWindowSizeRow: View {
     @Environment(VisibilityStore.self) private var visibility
 
     var body: some View {
-        let entry = AppEntry(size)
-        let isVisible = visibility.isItemVisible(entry)
-        SettingsRow(title: size.name, subtitle: size.summary) {
-            Image(systemName: CustomWindowSize.sfSymbol)
-        } trailing: {
-            AliasField(entry: entry)
-                .settingsEnabled(showsInLauncher && isVisible)
+        WithObservationTracking {
+            let entry = AppEntry(size)
+                    let isVisible = visibility.isItemVisible(entry)
+                    SettingsRow(title: size.name, subtitle: size.summary) {
+                        Image(systemName: CustomWindowSize.sfSymbol)
+                    } trailing: {
+                        AliasField(entry: entry)
+                            .settingsEnabled(showsInLauncher && isVisible)
 
-            ShortcutRecorder(action: .customWindowSize(id: size.id))
+                        ShortcutRecorder(action: .customWindowSize(id: size.id))
 
-            Button(action: onEdit) {
-                Image(systemName: "pencil")
-            }
-            .buttonStyle(.plain)
-            .help("Edit")
-            .accessibilityLabel("Edit \(size.name)")
+                        Button(action: onEdit) {
+                            Image(systemName: "pencil")
+                        }
+                        .buttonStyle(.plain)
+                        .help("Edit")
+                        .accessibilityLabel("Edit \(size.name)")
 
-            Button(action: onDelete) {
-                Image(systemName: "trash")
-                    .foregroundStyle(Theme.Colors.destructive)
-            }
-            .buttonStyle(.plain)
-            .help("Delete")
-            .accessibilityLabel("Delete \(size.name)")
+                        Button(action: onDelete) {
+                            Image(systemName: "trash")
+                                .foregroundStyle(Theme.Colors.destructive)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Delete")
+                        .accessibilityLabel("Delete \(size.name)")
 
-            Toggle(
-                "", isOn: Binding(get: { isVisible }, set: { visibility.setItemVisible($0, for: entry) })
-            )
-            .labelsHidden()
-            .toggleStyle(.checkbox)
-            .launcherVisibilityHelp()
-            .accessibilityLabel("Show \(size.name) in launcher")
+                        Toggle(
+                            "", isOn: Binding(get: { isVisible }, set: { visibility.setItemVisible($0, for: entry) })
+                        )
+                        .labelsHidden()
+                        .toggleStyle(.checkbox)
+                        .launcherVisibilityHelp()
+                        .accessibilityLabel("Show \(size.name) in launcher")
+                    }
         }
     }
 }

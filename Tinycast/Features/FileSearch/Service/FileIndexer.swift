@@ -1,4 +1,5 @@
 import CoreServices
+import ObservationPolyfill
 import Foundation
 
 /// The crawl runs in `FileIndexHelper`, so its memory leaves when that process exits.

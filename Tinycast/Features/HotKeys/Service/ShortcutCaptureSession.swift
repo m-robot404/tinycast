@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 import Carbon.HIToolbox
 
 /// Local monitors for the one active recording. See docs/features/hotkeys.md#recorder.

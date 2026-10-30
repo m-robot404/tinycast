@@ -1,4 +1,5 @@
 import Foundation
+import ObservationPolyfill
 import Observation
 
 /// Which live chat each surface shows; a chat is live in one place, and leaving never cancels it.

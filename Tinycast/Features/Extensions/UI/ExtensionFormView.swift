@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 /// React owns the values; every edit dispatches back and the re-render draws it.
 struct ExtensionFormView: View {
@@ -21,38 +22,40 @@ struct ExtensionFormView: View {
     }
 
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                VStack(alignment: .leading, spacing: form.rowSpacing) {
-                    ForEach(screen.fields) { field in
-                        row(field)
+        WithObservationTracking {
+            ScrollViewReader { proxy in
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: form.rowSpacing) {
+                                ForEach(screen.fields) { field in
+                                    row(field)
+                                }
+                            }
+                            // Centred as a block; the label column and controls keep their own widths.
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, form.formVerticalPadding)
+                            // Behind the fields, so a press on bare form closes an open list as a menu's does.
+                            .background {
+                                Color.clear.contentShape(Rectangle())
+                                    .onTapGesture { palette.dismissControlList() }
+                                    .onRightClick { palette.dismissControlList() }
+                            }
+                            .hideNativeScrollers()
+                            .scrollOriginAnchor()
+                        }
+                        .edgeDissolve()
+                        .thinScrollbar()
+                        .scrollFollowsSelection(
+                            scroll, row: focusedRowID, atOrigin: selection == 0, proxy: proxy)
                     }
-                }
-                // Centred as a block; the label column and controls keep their own widths.
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, form.formVerticalPadding)
-                // Behind the fields, so a press on bare form closes an open list as a menu's does.
-                .background {
-                    Color.clear.contentShape(Rectangle())
-                        .onTapGesture { palette.dismissControlList() }
-                        .onRightClick { palette.dismissControlList() }
-                }
-                .hideNativeScrollers()
-                .scrollOriginAnchor()
-            }
-            .edgeDissolve()
-            .thinScrollbar()
-            .scrollFollowsSelection(
-                scroll, row: focusedRowID, atOrigin: selection == 0, proxy: proxy)
-        }
-        // A form arrives with whatever row the screen before it left behind, so it states its own.
-        .onAppear { focus(screen.autoFocusedField) }
-        .onDisappear { palette.noteEditingField(false) }
-        // The palette moves the selection with ↑/↓ and ⇥; focus follows it, and a click leads it.
-        .onChange(of: selection) { focus(selection) }
-        .onChange(of: focused) { _, field in
-            palette.noteEditingField(field != nil)
-            if let field, field != selection { onSelect(field) }
+                    // A form arrives with whatever row the screen before it left behind, so it states its own.
+                    .onAppear { focus(screen.autoFocusedField) }
+                    .onDisappear { palette.noteEditingField(false) }
+                    // The palette moves the selection with ↑/↓ and ⇥; focus follows it, and a click leads it.
+                    .onChange(of: selection) { focus(selection) }
+                    .onChange(of: focused) { _, field in
+                        palette.noteEditingField(field != nil)
+                        if let field, field != selection { onSelect(field) }
+                    }
         }
     }
 
@@ -236,31 +239,33 @@ private struct ExtensionTextField: View {
     @State private var sent: String?
 
     var body: some View {
-        Group {
-            if secure {
-                SecureField("", text: $text, prompt: prompt)
-            } else {
-                TextField("", text: $text, prompt: prompt)
-            }
-        }
-        .textFieldStyle(.plain)
-        .font(metrics.typography.rowTitle)
-        .focused($focus, equals: index)
-        .extensionFieldChrome(focused: focus == index)
-        .modifier(ExtensionFormKeys(field: .text, onActivate: {}, onSubmit: onSubmit))
-        // The visible label is a Text in the row beside it, which the field cannot claim itself.
-        .accessibilityLabel(
-            Text(node.string("title") ?? node.string("placeholder") ?? String(localized: "Text"))
-        )
-        .extensionFieldHint(node.string("info"), error: node.string("error"))
-        .onAppear { text = node.string("value") ?? "" }
-        .onChange(of: node.string("value") ?? "") { _, incoming in
-            adopt(incoming)
-        }
-        .onChange(of: text) { _, outgoing in
-            guard outgoing != (node.string("value") ?? "") else { return }
-            sent = outgoing
-            onChange(node, outgoing)
+        WithObservationTracking {
+            Group {
+                        if secure {
+                            SecureField("", text: $text, prompt: prompt)
+                        } else {
+                            TextField("", text: $text, prompt: prompt)
+                        }
+                    }
+                    .textFieldStyle(.plain)
+                    .font(metrics.typography.rowTitle)
+                    .focused($focus, equals: index)
+                    .extensionFieldChrome(focused: focus == index)
+                    .modifier(ExtensionFormKeys(field: .text, onActivate: {}, onSubmit: onSubmit))
+                    // The visible label is a Text in the row beside it, which the field cannot claim itself.
+                    .accessibilityLabel(
+                        Text(node.string("title") ?? node.string("placeholder") ?? String(localized: "Text"))
+                    )
+                    .extensionFieldHint(node.string("info"), error: node.string("error"))
+                    .onAppear { text = node.string("value") ?? "" }
+                    .onChange(of: node.string("value") ?? "") { _, incoming in
+                        adopt(incoming)
+                    }
+                    .onChange(of: text) { _, outgoing in
+                        guard outgoing != (node.string("value") ?? "") else { return }
+                        sent = outgoing
+                        onChange(node, outgoing)
+                    }
         }
     }
 
@@ -294,40 +299,42 @@ private struct ExtensionTextArea: View {
     @State private var sent: String?
 
     var body: some View {
-        TextEditor(text: $text)
-            .font(metrics.typography.rowTitle)
-            .scrollContentBackground(.hidden)
-            // The text system insets its own line fragments, which the chrome's inset then repeats.
-            .padding(.horizontal, -form.textViewGutter)
-            .focused($focus, equals: index)
-            .extensionFieldChrome(focused: focus == index, multiline: true)
-            .modifier(ExtensionFormKeys(field: .textArea, onActivate: {}, onSubmit: onSubmit))
-            .accessibilityLabel(Text(node.string("title") ?? String(localized: "Text area")))
-            .extensionFieldHint(node.string("info"), error: node.string("error"))
-            .overlay(alignment: .topLeading) {
-                if text.isEmpty {
-                    Text(node.string("placeholder") ?? "")
+        WithObservationTracking {
+            TextEditor(text: $text)
                         .font(metrics.typography.rowTitle)
-                        .foregroundStyle(Theme.Colors.textTertiary)
-                        .padding(.horizontal, form.textInset)
-                        .padding(.vertical, form.verticalInset)
-                        .allowsHitTesting(false)
-                }
-            }
-            .onAppear { text = node.string("value") ?? "" }
-            .onChange(of: node.string("value") ?? "") { _, incoming in
-                if let sent {
-                    guard incoming == sent else { return }
-                    self.sent = nil
-                    return
-                }
-                if incoming != text { text = incoming }
-            }
-            .onChange(of: text) { _, outgoing in
-                guard outgoing != (node.string("value") ?? "") else { return }
-                sent = outgoing
-                onChange(node, outgoing)
-            }
+                        .scrollContentBackground(.hidden)
+                        // The text system insets its own line fragments, which the chrome's inset then repeats.
+                        .padding(.horizontal, -form.textViewGutter)
+                        .focused($focus, equals: index)
+                        .extensionFieldChrome(focused: focus == index, multiline: true)
+                        .modifier(ExtensionFormKeys(field: .textArea, onActivate: {}, onSubmit: onSubmit))
+                        .accessibilityLabel(Text(node.string("title") ?? String(localized: "Text area")))
+                        .extensionFieldHint(node.string("info"), error: node.string("error"))
+                        .overlay(alignment: .topLeading) {
+                            if text.isEmpty {
+                                Text(node.string("placeholder") ?? "")
+                                    .font(metrics.typography.rowTitle)
+                                    .foregroundStyle(Theme.Colors.textTertiary)
+                                    .padding(.horizontal, form.textInset)
+                                    .padding(.vertical, form.verticalInset)
+                                    .allowsHitTesting(false)
+                            }
+                        }
+                        .onAppear { text = node.string("value") ?? "" }
+                        .onChange(of: node.string("value") ?? "") { _, incoming in
+                            if let sent {
+                                guard incoming == sent else { return }
+                                self.sent = nil
+                                return
+                            }
+                            if incoming != text { text = incoming }
+                        }
+                        .onChange(of: text) { _, outgoing in
+                            guard outgoing != (node.string("value") ?? "") else { return }
+                            sent = outgoing
+                            onChange(node, outgoing)
+                        }
+        }
     }
 }
 
@@ -345,32 +352,34 @@ private struct ExtensionCheckbox: View {
     private var isOn: Bool { node.bool("value") ?? false }
 
     var body: some View {
-        HStack(spacing: metrics.spacing.sm) {
-            box
-            Text(node.string("label") ?? "")
-                .font(metrics.typography.rowTitle)
-                .foregroundStyle(Theme.Colors.textPrimary)
-                .lineLimit(1)
-            Spacer(minLength: 0)
+        WithObservationTracking {
+            HStack(spacing: metrics.spacing.sm) {
+                        box
+                        Text(node.string("label") ?? "")
+                            .font(metrics.typography.rowTitle)
+                            .foregroundStyle(Theme.Colors.textPrimary)
+                            .lineLimit(1)
+                        Spacer(minLength: 0)
+                    }
+                    .frame(width: form.controlWidth, alignment: .leading)
+                    .frame(height: form.controlHeight)
+                    .contentShape(Rectangle())
+                    .focusable()
+                    .focused($focus, equals: index)
+                    .focusEffectDisabled()
+                    .onHover { hovered = $0 }
+                    .onTapGesture { toggle() }
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(
+                        Text(node.string("label") ?? node.string("title") ?? String(localized: "Checkbox"))
+                    )
+                    // A toggle announces what it is and what it holds, not just that it can be pressed.
+                    .accessibilityAddTraits(isOn ? [.isToggle, .isSelected] : .isToggle)
+                    .accessibilityValue(Text(isOn ? "On" : "Off"))
+                    .extensionFieldHint(node.string("info"), error: node.string("error"))
+                    .accessibilityAction { toggle() }
+                    .modifier(ExtensionFormKeys(field: .checkbox, onActivate: toggle, onSubmit: onSubmit))
         }
-        .frame(width: form.controlWidth, alignment: .leading)
-        .frame(height: form.controlHeight)
-        .contentShape(Rectangle())
-        .focusable()
-        .focused($focus, equals: index)
-        .focusEffectDisabled()
-        .onHover { hovered = $0 }
-        .onTapGesture { toggle() }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(
-            Text(node.string("label") ?? node.string("title") ?? String(localized: "Checkbox"))
-        )
-        // A toggle announces what it is and what it holds, not just that it can be pressed.
-        .accessibilityAddTraits(isOn ? [.isToggle, .isSelected] : .isToggle)
-        .accessibilityValue(Text(isOn ? "On" : "Off"))
-        .extensionFieldHint(node.string("info"), error: node.string("error"))
-        .accessibilityAction { toggle() }
-        .modifier(ExtensionFormKeys(field: .checkbox, onActivate: toggle, onSubmit: onSubmit))
     }
 
     /// Drawn, not an SF Symbol pair: those differ in weight and jitter as they tick.
@@ -424,29 +433,31 @@ private struct ExtensionFilePicker: View {
     }
 
     var body: some View {
-        HStack(spacing: metrics.spacing.sm) {
-            Image(systemName: "doc")
-                .font(metrics.typography.rowTrailing)
-                .foregroundStyle(Theme.Colors.textSecondary)
-            Text(label)
-                .font(metrics.typography.rowTitle)
-                .foregroundStyle(paths.isEmpty ? Theme.Colors.textTertiary : Theme.Colors.textPrimary)
-                .lineLimit(1)
-            Spacer(minLength: 0)
+        WithObservationTracking {
+            HStack(spacing: metrics.spacing.sm) {
+                        Image(systemName: "doc")
+                            .font(metrics.typography.rowTrailing)
+                            .foregroundStyle(Theme.Colors.textSecondary)
+                        Text(label)
+                            .font(metrics.typography.rowTitle)
+                            .foregroundStyle(paths.isEmpty ? Theme.Colors.textTertiary : Theme.Colors.textPrimary)
+                            .lineLimit(1)
+                        Spacer(minLength: 0)
+                    }
+                    .extensionFieldChrome(focused: focus == index)
+                    .contentShape(Rectangle())
+                    .focusable()
+                    .focused($focus, equals: index)
+                    .focusEffectDisabled()
+                    .onTapGesture { choose() }
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(Text(node.string("title") ?? String(localized: "File")))
+                    .accessibilityValue(Text(label))
+                    .accessibilityAddTraits(.isButton)
+                    .extensionFieldHint(node.string("info"), error: node.string("error"))
+                    .accessibilityAction { choose() }
+                    .modifier(ExtensionFormKeys(field: .filePicker, onActivate: choose, onSubmit: onSubmit))
         }
-        .extensionFieldChrome(focused: focus == index)
-        .contentShape(Rectangle())
-        .focusable()
-        .focused($focus, equals: index)
-        .focusEffectDisabled()
-        .onTapGesture { choose() }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text(node.string("title") ?? String(localized: "File")))
-        .accessibilityValue(Text(label))
-        .accessibilityAddTraits(.isButton)
-        .extensionFieldHint(node.string("info"), error: node.string("error"))
-        .accessibilityAction { choose() }
-        .modifier(ExtensionFormKeys(field: .filePicker, onActivate: choose, onSubmit: onSubmit))
     }
 
     private func choose() {

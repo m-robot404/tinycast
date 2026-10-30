@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 import Carbon.HIToolbox
 import SwiftUI
 
@@ -15,20 +16,22 @@ private struct DictationWaveform: View {
     let processing: Bool
 
     var body: some View {
-        HStack(alignment: .center, spacing: Theme.Spacing.dictationWaveGap) {
-            ForEach(levels.indices, id: \.self) { index in
-                let emphasis =
-                    processing
-                    ? Double(levels[index])
-                    : min(1, Double(min(index, levels.count - 1 - index)) / 3)
-                Capsule()
-                    .fill(Theme.Colors.textPrimary.opacity(0.4 + 0.6 * emphasis))
-                    .frame(
-                        width: Theme.Size.dictationWaveBar,
-                        height: 3 + (processing ? 9 : 25) * CGFloat(levels[index]))
-            }
+        WithObservationTracking {
+            HStack(alignment: .center, spacing: Theme.Spacing.dictationWaveGap) {
+                        ForEach(levels.indices, id: \.self) { index in
+                            let emphasis =
+                                processing
+                                ? Double(levels[index])
+                                : min(1, Double(min(index, levels.count - 1 - index)) / 3)
+                            Capsule()
+                                .fill(Theme.Colors.textPrimary.opacity(0.4 + 0.6 * emphasis))
+                                .frame(
+                                    width: Theme.Size.dictationWaveBar,
+                                    height: 3 + (processing ? 9 : 25) * CGFloat(levels[index]))
+                        }
+                    }
+                    .animation(.easeOut(duration: 0.06), value: levels)
         }
-        .animation(.easeOut(duration: 0.06), value: levels)
     }
 }
 
@@ -37,15 +40,17 @@ private struct DictationProcessingWave: View {
     @State private var startedAt = Date()
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: reduceMotion)) { timeline in
-            let progress =
-                timeline.date.timeIntervalSince(startedAt)
-                .truncatingRemainder(dividingBy: 1.2) / 1.2
-            let center = (reduceMotion ? 0.5 : progress) * 28 - 4
-            DictationWaveform(
-                levels: (0..<DictationSpectrum.barCount).map { index in
-                    Float(max(0, 1 - abs(Double(index) - center) / 4))
-                }, processing: true)
+        WithObservationTracking {
+            TimelineView(.animation(minimumInterval: 1.0 / 30, paused: reduceMotion)) { timeline in
+                        let progress =
+                            timeline.date.timeIntervalSince(startedAt)
+                            .truncatingRemainder(dividingBy: 1.2) / 1.2
+                        let center = (reduceMotion ? 0.5 : progress) * 28 - 4
+                        DictationWaveform(
+                            levels: (0..<DictationSpectrum.barCount).map { index in
+                                Float(max(0, 1 - abs(Double(index) - center) / 4))
+                            }, processing: true)
+                    }
         }
     }
 }
@@ -54,23 +59,25 @@ private struct DictationPanelView: View {
     let state: DictationDisplayState
 
     var body: some View {
-        Group {
-            if state.phase == .listening {
-                DictationWaveform(
-                    levels: state.levels.enumerated().map { index, level in
-                        let edge = min(1, Float(min(index, state.levels.count - 1 - index)) / 4)
-                        let taper = edge * edge * (3 - 2 * edge)
-                        return level * (0.2 + 0.8 * taper)
-                    }, processing: false
-                )
-                .accessibilityLabel("Dictation listening")
-            } else {
-                DictationProcessingWave()
-                    .accessibilityLabel("Transcribing dictation")
-            }
+        WithObservationTracking {
+            Group {
+                        if state.phase == .listening {
+                            DictationWaveform(
+                                levels: state.levels.enumerated().map { index, level in
+                                    let edge = min(1, Float(min(index, state.levels.count - 1 - index)) / 4)
+                                    let taper = edge * edge * (3 - 2 * edge)
+                                    return level * (0.2 + 0.8 * taper)
+                                }, processing: false
+                            )
+                            .accessibilityLabel("Dictation listening")
+                        } else {
+                            DictationProcessingWave()
+                                .accessibilityLabel("Transcribing dictation")
+                        }
+                    }
+                    .frame(width: Theme.Size.dictationPanel.width, height: Theme.Size.dictationPanel.height)
+                    .glassEffect(.regular, in: .capsule)
         }
-        .frame(width: Theme.Size.dictationPanel.width, height: Theme.Size.dictationPanel.height)
-        .glassEffect(.regular, in: .capsule)
     }
 }
 

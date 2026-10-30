@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 /// The numbered display tabs: they scope the canvas and target a newly added entry.
 struct WindowLayoutDisplayTabs: View {
@@ -6,12 +7,14 @@ struct WindowLayoutDisplayTabs: View {
     let displays: [WindowLayoutDisplay]
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.xs) {
-            ForEach(Array(displays.enumerated()), id: \.element.uuid) { index, display in
-                tab(display, ordinal: index + 1)
-            }
+        WithObservationTracking {
+            HStack(spacing: Theme.Spacing.xs) {
+                        ForEach(Array(displays.enumerated()), id: \.element.uuid) { index, display in
+                            tab(display, ordinal: index + 1)
+                        }
+                    }
+                    .accessibilityLabel("Display")
         }
-        .accessibilityLabel("Display")
     }
 
     private func tab(_ display: WindowLayoutDisplay, ordinal: Int) -> some View {
@@ -48,15 +51,17 @@ struct WindowLayoutPositionGrid: View {
     ]
 
     var body: some View {
-        Grid(horizontalSpacing: Theme.Spacing.xs, verticalSpacing: Theme.Spacing.xs) {
-            ForEach(Self.rows, id: \.self) { row in
-                GridRow {
-                    ForEach(row, id: \.self) { cell($0) }
-                }
-            }
+        WithObservationTracking {
+            Grid(horizontalSpacing: Theme.Spacing.xs, verticalSpacing: Theme.Spacing.xs) {
+                        ForEach(Self.rows, id: \.self) { row in
+                            GridRow {
+                                ForEach(row, id: \.self) { cell($0) }
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .accessibilityLabel("Position")
         }
-        .frame(maxWidth: .infinity)
-        .accessibilityLabel("Position")
     }
 
     private func cell(_ anchor: WindowLayoutAnchor) -> some View {

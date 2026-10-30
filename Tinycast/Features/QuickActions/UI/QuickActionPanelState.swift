@@ -1,4 +1,5 @@
 import Foundation
+import ObservationPolyfill
 import Observation
 
 /// Owned by the controller, not the view, so a reply keeps arriving while SwiftUI re-renders.

@@ -1,4 +1,5 @@
 import Foundation
+import ObservationPolyfill
 
 /// The user's per-entry aliases, keyed like favorites and ranking by `preferenceKey`.
 @MainActor

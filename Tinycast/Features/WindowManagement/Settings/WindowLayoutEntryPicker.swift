@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 import SwiftUI
 
 struct WindowLayoutEntryPicker: View {
@@ -10,9 +11,11 @@ struct WindowLayoutEntryPicker: View {
     @State private var showingEntries = false
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.sm) {
-            addButton
-            entryButton
+        WithObservationTracking {
+            HStack(spacing: Theme.Spacing.sm) {
+                        addButton
+                        entryButton
+                    }
         }
     }
 

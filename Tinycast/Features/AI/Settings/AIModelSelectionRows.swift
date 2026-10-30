@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct AIModelSelectionRows<ModelLabel: View, EffortLabel: View>: View {
     @Environment(AISettingsStore.self) private var settings
@@ -13,34 +14,36 @@ struct AIModelSelectionRows<ModelLabel: View, EffortLabel: View>: View {
     @ViewBuilder let effortLabel: () -> EffortLabel
 
     var body: some View {
-        if modelGroups.isEmpty {
-            Label("No AI provider configured", systemImage: "sparkles")
-                .foregroundStyle(.secondary)
-        } else {
-            Picker(selection: modelBinding) {
-                if let inheritedTitle {
-                    Text(inheritedTitle).tag(AIModelSelection?.none)
-                    Divider()
-                }
-                ForEach(modelGroups) { group in
-                    Section(group.title) {
-                        ForEach(group.options) { option in
-                            Text(option.title).tag(Optional(option.selection))
+        WithObservationTracking {
+            if modelGroups.isEmpty {
+                        Label("No AI provider configured", systemImage: "sparkles")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Picker(selection: modelBinding) {
+                            if let inheritedTitle {
+                                Text(inheritedTitle).tag(AIModelSelection?.none)
+                                Divider()
+                            }
+                            ForEach(modelGroups) { group in
+                                Section(group.title) {
+                                    ForEach(group.options) { option in
+                                        Text(option.title).tag(Optional(option.selection))
+                                    }
+                                }
+                            }
+                        } label: {
+                            modelLabel()
+                        }
+                        if !efforts.isEmpty {
+                            Picker(selection: effortBinding) {
+                                ForEach(efforts) { effort in
+                                    Text(effort.title).tag(effort.id)
+                                }
+                            } label: {
+                                effortLabel()
+                            }
                         }
                     }
-                }
-            } label: {
-                modelLabel()
-            }
-            if !efforts.isEmpty {
-                Picker(selection: effortBinding) {
-                    ForEach(efforts) { effort in
-                        Text(effort.title).tag(effort.id)
-                    }
-                } label: {
-                    effortLabel()
-                }
-            }
         }
     }
 

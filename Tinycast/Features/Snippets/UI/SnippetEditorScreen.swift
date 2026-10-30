@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct SnippetEditorScreen: PaletteScreen {
     let coordinator: SnippetCoordinator

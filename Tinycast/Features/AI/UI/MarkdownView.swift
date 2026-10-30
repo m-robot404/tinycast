@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 /// Renders parsed markdown; the body is erased so a nested list cannot make `Body` circular.
 struct MarkdownView: View {
@@ -30,32 +31,34 @@ private struct MarkdownBlockView: View {
     let block: MarkdownBlock
 
     var body: some View {
-        switch block {
-        case .heading(let level, let text):
-            Text(MarkdownInline.attributed(text, metrics))
-                .font(MarkdownInline.headingFont(level, metrics))
-                .fixedSize(horizontal: false, vertical: true)
-        case .paragraph(let text):
-            Text(MarkdownInline.attributed(text, metrics))
-                .fixedSize(horizontal: false, vertical: true)
-        case .bulletList(let items):
-            MarkdownListView(items: items, start: nil)
-        case .numberedList(let start, let items):
-            MarkdownListView(items: items, start: start)
-        case .code(let language, let text):
-            MarkdownCodeView(language: language, text: text)
-        case .quote(let blocks):
-            MarkdownQuoteView(blocks: blocks)
-        case .table(let table):
-            MarkdownTableView(table: table)
-        case .math(let formula):
-            Text(formula.source)
-        case .pendingMath:
-            EmptyView()
-        case .rule:
-            Rectangle()
-                .fill(Theme.Colors.separator)
-                .frame(height: Theme.Size.hairline)
+        WithObservationTracking {
+            switch block {
+                    case .heading(let level, let text):
+                        Text(MarkdownInline.attributed(text, metrics))
+                            .font(MarkdownInline.headingFont(level, metrics))
+                            .fixedSize(horizontal: false, vertical: true)
+                    case .paragraph(let text):
+                        Text(MarkdownInline.attributed(text, metrics))
+                            .fixedSize(horizontal: false, vertical: true)
+                    case .bulletList(let items):
+                        MarkdownListView(items: items, start: nil)
+                    case .numberedList(let start, let items):
+                        MarkdownListView(items: items, start: start)
+                    case .code(let language, let text):
+                        MarkdownCodeView(language: language, text: text)
+                    case .quote(let blocks):
+                        MarkdownQuoteView(blocks: blocks)
+                    case .table(let table):
+                        MarkdownTableView(table: table)
+                    case .math(let formula):
+                        Text(formula.source)
+                    case .pendingMath:
+                        EmptyView()
+                    case .rule:
+                        Rectangle()
+                            .fill(Theme.Colors.separator)
+                            .frame(height: Theme.Size.hairline)
+                    }
         }
     }
 }
@@ -68,14 +71,16 @@ private struct MarkdownListView: View {
     let start: Int?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: metrics.spacing.xs) {
-            ForEach(Array(items.enumerated()), id: \.offset) { offset, item in
-                HStack(alignment: .firstTextBaseline, spacing: metrics.spacing.sm) {
-                    marker(at: offset, checked: item.checked)
-                        .frame(minWidth: metrics.size.markdownListMarker, alignment: .trailing)
-                    MarkdownView(blocks: item.blocks, spacing: metrics.spacing.xs)
-                }
-            }
+        WithObservationTracking {
+            VStack(alignment: .leading, spacing: metrics.spacing.xs) {
+                        ForEach(Array(items.enumerated()), id: \.offset) { offset, item in
+                            HStack(alignment: .firstTextBaseline, spacing: metrics.spacing.sm) {
+                                marker(at: offset, checked: item.checked)
+                                    .frame(minWidth: metrics.size.markdownListMarker, alignment: .trailing)
+                                MarkdownView(blocks: item.blocks, spacing: metrics.spacing.xs)
+                            }
+                        }
+                    }
         }
     }
 
@@ -109,13 +114,15 @@ private struct MarkdownQuoteView: View {
     let blocks: [MarkdownBlock]
 
     var body: some View {
-        HStack(alignment: .top, spacing: metrics.spacing.lg) {
-            RoundedRectangle(cornerRadius: metrics.radius.keyCap, style: .continuous)
-                .fill(Theme.Colors.border)
-                .frame(width: metrics.size.markdownQuoteBar)
-            MarkdownView(blocks: blocks)
-                .foregroundStyle(Theme.Colors.textSecondary)
+        WithObservationTracking {
+            HStack(alignment: .top, spacing: metrics.spacing.lg) {
+                        RoundedRectangle(cornerRadius: metrics.radius.keyCap, style: .continuous)
+                            .fill(Theme.Colors.border)
+                            .frame(width: metrics.size.markdownQuoteBar)
+                        MarkdownView(blocks: blocks)
+                            .foregroundStyle(Theme.Colors.textSecondary)
+                    }
+                    .fixedSize(horizontal: false, vertical: true)
         }
-        .fixedSize(horizontal: false, vertical: true)
     }
 }

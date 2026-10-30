@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 import SwiftUI
 
 struct UpdateWindowView: View {
@@ -15,29 +16,31 @@ struct UpdateWindowView: View {
     private static let cardHeight: CGFloat = 196
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
-            hero
-            detail
-            actions
+        WithObservationTracking {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
+                        hero
+                        detail
+                        actions
+                    }
+                    // Less on top: the title bar adds 32pt, and the lights must be cleared.
+                    .padding(.top, Theme.Spacing.sm)
+                    .padding([.horizontal, .bottom], Theme.Spacing.xxl)
+                    // The ideal height, not the window's, so sizing to it converges instead of feeding back.
+                    .fixedSize(horizontal: false, vertical: true)
+                    .onGeometryChange(for: CGFloat.self) {
+                        $0.size.height
+                    } action: {
+                        updates.fit(height: $0)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .top)
+                    // Only the gradient reaches under the titlebar; the content stays in the safe area.
+                    .background(
+                        LinearGradient(
+                            colors: [Theme.Colors.sheen, Color.clear], startPoint: .top, endPoint: .center
+                        )
+                        .ignoresSafeArea()
+                    )
         }
-        // Less on top: the title bar adds 32pt, and the lights must be cleared.
-        .padding(.top, Theme.Spacing.sm)
-        .padding([.horizontal, .bottom], Theme.Spacing.xxl)
-        // The ideal height, not the window's, so sizing to it converges instead of feeding back.
-        .fixedSize(horizontal: false, vertical: true)
-        .onGeometryChange(for: CGFloat.self) {
-            $0.size.height
-        } action: {
-            updates.fit(height: $0)
-        }
-        .frame(maxWidth: .infinity, alignment: .top)
-        // Only the gradient reaches under the titlebar; the content stays in the safe area.
-        .background(
-            LinearGradient(
-                colors: [Theme.Colors.sheen, Color.clear], startPoint: .top, endPoint: .center
-            )
-            .ignoresSafeArea()
-        )
     }
 
     // MARK: - Hero

@@ -1,4 +1,5 @@
 import Foundation
+import ObservationPolyfill
 
 /// Keyed by manifest name like preferences, so a reinstall keeps the choice.
 @MainActor

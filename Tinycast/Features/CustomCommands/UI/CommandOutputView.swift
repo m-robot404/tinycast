@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 import SwiftUI
 
 /// One flat surface: the log is the page, separated by space and weight, not by rules.
@@ -8,17 +9,19 @@ struct CommandOutputView: View {
     static let initialSize = CGSize(width: 720, height: 460)
 
     var body: some View {
-        Group {
-            if let run = presenter.run {
-                VStack(alignment: .leading, spacing: 0) {
-                    header(run)
-                    TerminalLogView(run: run)
-                    footer(run)
-                }
-            }
+        WithObservationTracking {
+            Group {
+                        if let run = presenter.run {
+                            VStack(alignment: .leading, spacing: 0) {
+                                header(run)
+                                TerminalLogView(run: run)
+                                footer(run)
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                    .background(Theme.Colors.terminalSurface)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .background(Theme.Colors.terminalSurface)
     }
 
     // MARK: - Header
@@ -137,19 +140,21 @@ private struct CopyLogButton: View {
     @State private var copiedAt: Date?
 
     var body: some View {
-        BarButton(chrome: .rounded) {
-            Paster.copyPlainText(log)
-            copiedAt = Date()
-        } label: {
-            Image(systemName: copiedAt == nil ? "square.on.square" : "checkmark")
-                .font(Theme.Typography.bar)
-                .foregroundStyle(copiedAt == nil ? Theme.Colors.textSecondary : Theme.Colors.success)
-        }
-        .tooltip(String(localized: "Copy Output"))
-        .task(id: copiedAt) {
-            guard copiedAt != nil else { return }
-            try? await Task.sleep(for: .seconds(Theme.Duration.copyFeedback))
-            copiedAt = nil
+        WithObservationTracking {
+            BarButton(chrome: .rounded) {
+                        Paster.copyPlainText(log)
+                        copiedAt = Date()
+                    } label: {
+                        Image(systemName: copiedAt == nil ? "square.on.square" : "checkmark")
+                            .font(Theme.Typography.bar)
+                            .foregroundStyle(copiedAt == nil ? Theme.Colors.textSecondary : Theme.Colors.success)
+                    }
+                    .tooltip(String(localized: "Copy Output"))
+                    .task(id: copiedAt) {
+                        guard copiedAt != nil else { return }
+                        try? await Task.sleep(for: .seconds(Theme.Duration.copyFeedback))
+                        copiedAt = nil
+                    }
         }
     }
 }

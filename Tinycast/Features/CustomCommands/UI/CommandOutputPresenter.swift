@@ -1,4 +1,5 @@
 import Foundation
+import ObservationPolyfill
 
 struct CommandOutcome: Sendable {
     let summary: String

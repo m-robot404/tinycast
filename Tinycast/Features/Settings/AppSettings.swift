@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 /// Delay before a closed palette pops to root; an unset key reads as `.immediately`.
 enum PopToRootTimeout: Int, CaseIterable, Identifiable, Sendable {

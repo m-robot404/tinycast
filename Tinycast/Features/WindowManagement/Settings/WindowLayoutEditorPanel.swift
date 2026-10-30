@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 import SwiftUI
 
 /// Identifies the editor to present; nil is "new", and the UUID keeps two opens distinct.
@@ -30,27 +31,29 @@ struct WindowLayoutEditorPanel: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 0) {
-                previewColumn
-                Divider()
-                WindowLayoutInspector(draft: draft, displays: screens.map(\.display))
-                    .frame(width: Theme.Size.layoutInspectorColumn)
-            }
-            // Stated, never intrinsic: a panel that grew as fields appeared would jump.
-            .frame(height: Theme.Size.layoutEditorSheet.height)
-            Divider()
-            footer
-        }
-        .frame(width: Theme.Size.layoutEditorSheet.width)
-        .settingsEditorPanelSurface()
-        .task {
-            // A display can be unplugged mid-edit; the canvas must not draw geometry that is gone.
-            for await _ in NotificationCenter.default.notifications(
-                named: NSApplication.didChangeScreenParametersNotification)
-            {
-                screens = Self.connectedScreens()
-            }
+        WithObservationTracking {
+            VStack(spacing: 0) {
+                        HStack(spacing: 0) {
+                            previewColumn
+                            Divider()
+                            WindowLayoutInspector(draft: draft, displays: screens.map(\.display))
+                                .frame(width: Theme.Size.layoutInspectorColumn)
+                        }
+                        // Stated, never intrinsic: a panel that grew as fields appeared would jump.
+                        .frame(height: Theme.Size.layoutEditorSheet.height)
+                        Divider()
+                        footer
+                    }
+                    .frame(width: Theme.Size.layoutEditorSheet.width)
+                    .settingsEditorPanelSurface()
+                    .task {
+                        // A display can be unplugged mid-edit; the canvas must not draw geometry that is gone.
+                        for await _ in NotificationCenter.default.notifications(
+                            named: NSApplication.didChangeScreenParametersNotification)
+                        {
+                            screens = Self.connectedScreens()
+                        }
+                    }
         }
     }
 

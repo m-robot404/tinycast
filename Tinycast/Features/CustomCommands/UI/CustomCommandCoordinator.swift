@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 import Observation
 
 /// Owns custom commands: the library, the one run funnel with its gates, and a deletion's cleanup.

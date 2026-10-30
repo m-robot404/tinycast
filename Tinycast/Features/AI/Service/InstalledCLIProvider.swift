@@ -1,4 +1,5 @@
 import Foundation
+import ObservationPolyfill
 import UniformTypeIdentifiers
 
 struct InstalledCLIProvider: AIProvider {
