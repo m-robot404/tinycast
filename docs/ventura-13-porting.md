@@ -1,10 +1,10 @@
 # macOS Ventura 13 port — engineering audit
 
-**Status: not yet compatible.** This branch is an isolated porting track. It deliberately does not lower the production deployment target until the source has been migrated and a real Ventura build passes.
+**Status: in progress; not yet verified compatible.** This branch is an isolated porting track. It lowers the deployment target to 13.0 to expose source/API incompatibilities, but the build and Ventura runtime checks must pass before the branch is considered usable.
 
 ## Confirmed blockers in the current source
 
-1. `project.yml` declares macOS 26.0 and Swift 6.0. The checked-in Xcode project is generated from this file.
+1. The upstream baseline declared macOS 26.0 and Swift 6.0. This branch now lowers both `project.yml` and the checked-in Xcode project to macOS 13.0 while retaining Swift 6 language mode.
 2. `docs/development.md` requires macOS 26 and Xcode 27, explicitly citing Liquid Glass and the SwiftUI macro plugin.
 3. `Tinycast/DesignSystem/GlassEffectView.swift` originally instantiated `NSGlassEffectView` unconditionally. This branch now guards the newer symbol and provides an `NSVisualEffectView` fallback; the compatibility build must still confirm it compiles against an older SDK.
 4. The architecture document records 39 `@Observable` model types, and `AppCore.swift` is one concrete example. SwiftUI's native Observation integration begins at macOS 14, so Ventura needs a deliberate compatibility implementation (for example, a tested Observation backport plus corresponding SwiftUI view/environment changes) or a larger migration to `ObservableObject` / `@Published`.
@@ -40,7 +40,7 @@
 
 ## Current evidence
 
-- `project.yml`: `deploymentTarget.macOS = 26.0`, `SWIFT_VERSION = 6.0`.
+- `project.yml` and `Tinycast.xcodeproj/project.pbxproj` on this branch: macOS 13.0 deployment target; Swift language mode remains 6.0.
 - `docs/development.md`: macOS 26 / Xcode 27 toolchain requirement.
 - `Tinycast/DesignSystem/GlassEffectView.swift`: direct `NSGlassEffectView` use.
 - `Tinycast/App/AppCore.swift`: native `@Observable` usage.
