@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import ObservationPolyfill
 
@@ -82,17 +83,21 @@ struct ExtensionActionsPanel: View {
                             placeholder: String(localized: "Search for actions…"), height: panel.rowHeight,
                             verticalOffset: -metrics.spacing.xxs / 2)
                     }
-                    // The panel holds focus while open, so the screen's own shortcut keys never see these.
-                    .onKeyPress(phases: .down) { press in
-                        guard !press.modifiers.isEmpty,
-                            let row = shortcutRow(
-                                ASCIIKeyboardLayout.keyEquivalent(fallingBackTo: press.key), press.modifiers)
-                        else { return .ignored }
-                        onActivate(row)
-                        return .handled
-                    }
+                    // The panel holds focus while open, so its local key monitor owns shortcut chords.
+                    .background(
+                        ExtensionKeyEventMonitor { event in
+                            let modifiers = Self.eventModifiers(event.modifierFlags)
+                            guard !modifiers.isEmpty,
+                                let key = Self.keyEquivalent(event),
+                                let row = shortcutRow(
+                                    ASCIIKeyboardLayout.keyEquivalent(fallingBackTo: key), modifiers)
+                            else { return false }
+                            onActivate(row)
+                            return true
+                        }
+                    )
                     .frame(width: panel.width)
-                    .glassEffect(.regular, in: shape)
+                    .compatibleGlassEffect(in: shape)
         }
     }
 
@@ -135,14 +140,12 @@ struct ExtensionActionsPanel: View {
                     }
                 }
                 .padding(.horizontal, panel.listInset)
+                .padding(.vertical, panel.listInset)
             }
-            // A margin, not padding: a revealed end row keeps its inset instead of meeting the edge.
-            .contentMargins(.vertical, panel.listInset, for: .scrollContent)
             .frame(height: extent.viewport + panel.listInset * 2)
-            .scrollBounceBehavior(extent.content > extent.viewport ? .always : .basedOnSize)
             // `never`, not `hidden`: hidden still lets AppKit claim the scroller's gutter.
             .scrollIndicators(.never)
-            .onChange(of: selection) {
+            .onChange(of: selection) { _ in
                 let movedByPointer = hoverSelection == selection
                 hoverSelection = nil
                 guard !movedByPointer else { return }
@@ -231,6 +234,84 @@ private struct ExtensionActionRow: View {
                         )
                     }
                     .buttonStyle(.plain)
+        }
+    }
+}
+
+/// Backports SwiftUI's key-press handler to Ventura using a window-scoped AppKit monitor.
+private struct ExtensionKeyEventMonitor: NSViewRepresentable {
+    let handler: (NSEvent) -> Bool
+
+    func makeCoordinator() -> Coordinator { Coordinator(handler: handler) }
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        context.coordinator.attach(to: view)
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        context.coordinator.handler = handler
+    }
+
+    static func dismantleNSView(_ nsView: NSView, coordinator: Coordinator) {
+        coordinator.remove()
+    }
+
+    @MainActor
+    final class Coordinator {
+        var handler: (NSEvent) -> Bool
+        weak var view: NSView?
+        private var monitor: Any?
+
+        init(handler: @escaping (NSEvent) -> Bool) {
+            self.handler = handler
+        }
+
+        func attach(to view: NSView) {
+            self.view = view
+            monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+                MainActor.assumeIsolated {
+                    guard let self, let view = self.view, let window = view.window,
+                        event.window === window
+                    else { return event }
+                    return self.handler(event) ? nil : event
+                }
+            }
+        }
+
+        func remove() {
+            if let monitor { NSEvent.removeMonitor(monitor) }
+            monitor = nil
+            view = nil
+        }
+    }
+}
+
+private extension ExtensionActionsPanel {
+    static func eventModifiers(_ flags: NSEvent.ModifierFlags) -> EventModifiers {
+        var result: EventModifiers = []
+        if flags.contains(.command) { result.insert(.command) }
+        if flags.contains(.option) { result.insert(.option) }
+        if flags.contains(.control) { result.insert(.control) }
+        if flags.contains(.shift) { result.insert(.shift) }
+        if flags.contains(.function) { result.insert(.function) }
+        return result
+    }
+
+    static func keyEquivalent(_ event: NSEvent) -> KeyEquivalent? {
+        switch event.keyCode {
+        case 36: return .return
+        case 48: return .tab
+        case 49: return .space
+        case 53: return .escape
+        case 123: return .leftArrow
+        case 124: return .rightArrow
+        case 125: return .downArrow
+        case 126: return .upArrow
+        default:
+            guard let character = event.charactersIgnoringModifiers?.first else { return nil }
+            return KeyEquivalent(character)
         }
     }
 }
