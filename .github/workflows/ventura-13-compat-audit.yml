@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: ventura-13-${{ github.event.pull_request.number || github.ref }}
@@ -26,6 +26,8 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref_name }}
 
       - name: Verify installed Xcode and Swift toolchain
         shell: bash
@@ -43,6 +45,21 @@ jobs:
           fi
           xcodegen generate
           python3 Scripts/prepare-ventura13.py
+
+      - name: Commit generated Ventura source and project changes
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.head.ref == 'ventura-13-port'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Tinycast Tinycast.xcodeproj
+          if git diff --cached --quiet; then
+            echo "No generated source or project changes to commit."
+          else
+            git commit -m "refactor: backport SwiftUI Observation for Ventura 13"
+            git push origin HEAD:ventura-13-port
+          fi
 
       - name: Build app and embedded helpers for macOS 13
         shell: bash
