@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: ventura-13-${{ github.ref }}
@@ -38,6 +38,21 @@ jobs:
           fi
           xcodegen generate
           python3 Scripts/prepare-ventura13.py
+
+      - name: Persist generated Ventura source updates
+        if: github.event_name == 'push' && github.ref == 'refs/heads/ventura-13-port'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Tinycast Tinycast.xcodeproj
+          if git diff --cached --quiet; then
+            echo "No generated source updates to commit."
+          else
+            git commit -m "fix: normalize Ventura SwiftUI observation builders"
+            git push origin HEAD:ventura-13-port
+          fi
 
       - name: Build app and embedded helpers for macOS 13
         shell: bash
