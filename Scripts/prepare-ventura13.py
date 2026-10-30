@@ -102,8 +102,47 @@ def matching_brace(source: str, opening: int) -> int:
     raise ValueError(f"Unmatched Swift body brace at offset {opening}")
 
 
+def code_mask(source: str) -> list[bool]:
+    """Mark Swift code while excluding comments and string literal contents."""
+    mask = [True] * len(source)
+    i = 0
+    while i < len(source):
+        if source.startswith("//", i):
+            end = source.find("\n", i + 2)
+            end = len(source) if end < 0 else end
+            for offset in range(i, end):
+                mask[offset] = False
+            i = end
+            continue
+        if source.startswith("/*", i):
+            start = i
+            i += 2
+            depth = 1
+            while i < len(source) and depth:
+                if source.startswith("/*", i):
+                    depth += 1
+                    i += 2
+                elif source.startswith("*/", i):
+                    depth -= 1
+                    i += 2
+                else:
+                    i += 1
+            for offset in range(start, i):
+                mask[offset] = False
+            continue
+        end = skip_string(source, i)
+        if end is not None:
+            for offset in range(i, end):
+                mask[offset] = False
+            i = end
+            continue
+        i += 1
+    return mask
+
+
 def wrap_view_bodies(source: str) -> tuple[str, int]:
-    matches = list(VIEW_BODY.finditer(source))
+    mask = code_mask(source)
+    matches = [match for match in VIEW_BODY.finditer(source) if mask[match.start()]]
     wrapped = 0
 
     for match in reversed(matches):
