@@ -20,20 +20,20 @@ concurrency:
 
 jobs:
   build:
-    # Xcode 16.4's SDK can target macOS 13 and catches accidental dependencies
-    # on newer SDK-only symbols. The build runner itself is not Ventura.
-    runs-on: macos-15
+    # Xcode 27 Apple Silicon runner. The SDK compiles against a macOS 13 deployment target;
+    # a separate real Ventura runtime check remains required.
+    runs-on: xcode-27-arm64
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
-      - name: Select Xcode 16.4
+      - name: Select Xcode 27
         shell: bash
         run: |
           set -euo pipefail
-          XCODE_PATH="/Applications/Xcode_16.4.app"
-          if [[ ! -d "$XCODE_PATH" ]]; then
-            echo "::error::Xcode 16.4 is not installed on this runner image."
+          XCODE_PATH="$(find -E /Applications -maxdepth 1 -type d -regex '.*/Xcode_27(\\.[0-9]+)*\\.app' | sort -V | tail -n1)"
+          if [[ -z "$XCODE_PATH" ]]; then
+            echo "::error::Xcode 27 is not installed on this runner image."
             ls -1 /Applications | grep -i Xcode || true
             exit 1
           fi
