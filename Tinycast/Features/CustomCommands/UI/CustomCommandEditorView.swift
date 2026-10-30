@@ -86,9 +86,7 @@ struct CustomCommandEditorView: View {
                             .padding(.horizontal, metrics.spacing.xxxl * 2)
                             .padding(.vertical, metrics.spacing.md)
                         }
-                        .scrollClipDisabled()
                         .edgeDissolve()
-                        .focusEffectDisabled()
                         .task(id: FocusRequest(field: editor.focusedField, token: palette.focusToken)) {
                             palette.noteEditingField(true)
                             let field = editor.focusedField
@@ -98,11 +96,11 @@ struct CustomCommandEditorView: View {
                             proxy.scrollTo(scrollTarget(for: field))
                             focusedField = field
                         }
-                        .onChange(of: focusedField) { _, field in
+                        .onChange(of: focusedField) { field in
                             if let field, editor.focusedField != field { editor.focusedField = field }
                             focusedControl = field.flatMap { isTextField($0) ? nil : $0 }
                         }
-                        .onChange(of: focusedControl) { _, field in
+                        .onChange(of: focusedControl) { field in
                             if let field { focusedField = field }
                         }
                         .onDisappear {
@@ -144,27 +142,24 @@ struct CustomCommandEditorView: View {
 
     private var iconMenu: some View {
         let isOpen = openMenuCorner == .belowControl(iconMenuFrame)
-        return HStack(spacing: metrics.spacing.sm) {
-            SymbolImage(
-                name: editor.iconSymbol ?? CustomCommand.sfSymbol,
-                size: metrics.scaled(Theme.Typography.menuSymbolSize))
-            Image(systemName: "chevron.down")
-                .font(metrics.typography.disclosure)
-                .foregroundStyle(Theme.Colors.textSecondary)
-                .rotationEffect(.degrees(isOpen ? 180 : 0))
-                .animation(reduceMotion ? nil : Theme.MenuMotion.chevronAnimation, value: isOpen)
+        return Button(action: showIconMenu) {
+            HStack(spacing: metrics.spacing.sm) {
+                SymbolImage(
+                    name: editor.iconSymbol ?? CustomCommand.sfSymbol,
+                    size: metrics.scaled(Theme.Typography.menuSymbolSize))
+                Image(systemName: "chevron.down")
+                    .font(metrics.typography.disclosure)
+                    .foregroundStyle(Theme.Colors.textSecondary)
+                    .rotationEffect(.degrees(isOpen ? 180 : 0))
+                    .animation(reduceMotion ? nil : Theme.MenuMotion.chevronAnimation, value: isOpen)
+            }
+            .padding(.horizontal, metrics.spacing.xl)
+            .frame(height: metrics.size.dialogButtonHeight)
+            .contentShape(.rect)
         }
-        .padding(.horizontal, metrics.spacing.xl)
-        .frame(height: metrics.size.dialogButtonHeight)
-        .contentShape(.rect)
-        .onTapGesture(perform: showIconMenu)
+        .buttonStyle(.plain)
         .fixedSize()
-        .focusable()
         .focused($focusedControl, equals: .icon)
-        .onKeyPress(keys: [.return, .space]) { _ in
-            showIconMenu()
-            return .handled
-        }
         .onGeometryChange(for: CGRect.self) {
             $0.frame(in: .global)
         } action: {
@@ -227,10 +222,6 @@ struct CustomCommandEditorView: View {
                         .toggleStyle(.checkbox)
                         .focusable()
                         .focused($focusedControl, equals: .argumentOptional(id))
-                        .onKeyPress(.space) {
-                            argument.isOptional.toggle()
-                            return .handled
-                        }
                     action(.removeArgument(id), perform: { editor.removeArgument(id: id) }) {
                         Image(systemName: "minus.circle")
                     }
@@ -282,17 +273,13 @@ struct CustomCommandEditorView: View {
         _ field: CustomCommandEditorSession.Field, perform: @escaping () -> Void,
         @ViewBuilder label: () -> Label
     ) -> some View {
-        label()
-            .contentShape(.rect)
-            .onTapGesture(perform: perform)
-            .focusable()
-            .focused($focusedControl, equals: field)
-            .onKeyPress(keys: [.return, .space]) { _ in
-                perform()
-                return .handled
-            }
-            .accessibilityAddTraits(.isButton)
-            .accessibilityAction { perform() }
+        Button(action: perform) {
+            label()
+        }
+        .buttonStyle(.plain)
+        .focused($focusedControl, equals: field)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { perform() }
     }
 
     private func focusBinding(_ field: CustomCommandEditorSession.Field) -> Binding<Bool> {
@@ -315,10 +302,6 @@ struct CustomCommandEditorView: View {
         .toggleStyle(.checkbox)
         .focusable()
         .focused($focusedControl, equals: focus)
-        .onKeyPress(.space) {
-            value.wrappedValue.toggle()
-            return .handled
-        }
         .id(focus)
     }
 }
