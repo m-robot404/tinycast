@@ -32,6 +32,11 @@ settings:
       STRIP_SWIFT_SYMBOLS: YES
       DEAD_CODE_STRIPPING: YES
 
+packages:
+  ObservationPolyfill:
+    url: https://github.com/moreswift/swift-observation-polyfill
+    revision: d8843fa6dbf970aab42faaf101c9ce1cfd16fb94
+
 targets:
   Tinycast:
     type: application
@@ -52,6 +57,8 @@ targets:
       - path: NOTICE.md
         buildPhase: resources
     dependencies:
+      - package: ObservationPolyfill
+        product: ObservationPolyfill
       - target: DictationHelper
         link: false
         embed: false
@@ -78,6 +85,13 @@ targets:
         copy:
           destination: wrapper
           subpath: Contents/Helpers
+    preBuildScripts:
+      - name: Prepare macOS 13 Observation backport
+        script: |
+          if [[ "${MACOSX_DEPLOYMENT_TARGET:-}" == "13.0" ]]; then
+            python3 "${SRCROOT}/Scripts/prepare-ventura13.py"
+          fi
+        basedOnDependencyAnalysis: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: "$(TINYCAST_BUNDLE_IDENTIFIER)"
