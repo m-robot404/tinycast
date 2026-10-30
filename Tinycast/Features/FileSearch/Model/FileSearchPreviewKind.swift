@@ -37,7 +37,8 @@ enum FileSearchPreviewKind: Equatable, Sendable {
     static func isText(_ bytes: Data, isWholeFile: Bool) -> Bool {
         guard !bytes.contains(0) else { return false }
         let checked = isWholeFile ? bytes : bytes.dropLast(cutCharacterLength(bytes))
-        return String(validating: checked, as: UTF8.self) != nil
+        // String(validating:as:) isn't available in the macOS 13 Foundation SDK.
+        return String(data: Data(checked), encoding: .utf8) != nil
     }
 
     /// The bytes of a trailing multi-byte character that is missing its continuation bytes.
