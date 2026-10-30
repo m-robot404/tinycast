@@ -42,6 +42,7 @@ jobs:
             brew install xcodegen
           fi
           xcodegen generate
+          python3 Scripts/prepare-ventura13.py
 
       - name: Build app and embedded helpers for macOS 13
         shell: bash
