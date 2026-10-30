@@ -9,6 +9,13 @@ enum DictationModel: String, CaseIterable, Identifiable, Codable, Sendable {
     enum Family: String, CaseIterable, Identifiable {
         case parakeet = "Parakeet", qwen = "Qwen"
         var id: Self { self }
+        var isAvailableOnCurrentOS: Bool {
+            switch self {
+            case .parakeet: true
+            case .qwen:
+                if #available(macOS 15.0, *) { true } else { false }
+            }
+        }
         var summary: String {
             self == .parakeet
                 ? String(localized: "Fast and memory-efficient")
@@ -47,6 +54,7 @@ enum DictationModel: String, CaseIterable, Identifiable, Codable, Sendable {
         }
     }
     var isQwen: Bool { family == .qwen }
+    var isAvailableOnCurrentOS: Bool { family.isAvailableOnCurrentOS }
     var parakeetConfiguration: ParakeetConfiguration? {
         switch self {
         case .ultra, .redux:
