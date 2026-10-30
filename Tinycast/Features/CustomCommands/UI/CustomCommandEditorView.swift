@@ -1,6 +1,13 @@
 import SwiftUI
 import ObservationPolyfill
 
+private struct IconMenuFramePreferenceKey: PreferenceKey {
+    static var defaultValue = CGRect.zero
+    static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
+        value = nextValue()
+    }
+}
+
 struct CustomCommandEditorView: View {
     @ObservationPolyfill.Bindable var editor: CustomCommandEditorSession
     let openMenuCorner: MenuPanelCorner?
@@ -160,11 +167,14 @@ struct CustomCommandEditorView: View {
         .buttonStyle(.plain)
         .fixedSize()
         .focused($focusedControl, equals: .icon)
-        .onGeometryChange(for: CGRect.self) {
-            $0.frame(in: .global)
-        } action: {
-            iconMenuFrame = $0
-        }
+        .background(
+            GeometryReader { proxy in
+                Color.clear.preference(
+                    key: IconMenuFramePreferenceKey.self,
+                    value: proxy.frame(in: .global))
+            }
+        )
+        .onPreferenceChange(IconMenuFramePreferenceKey.self) { iconMenuFrame = $0 }
         .tooltip(String(localized: "Choose an icon"), alignment: .trailing, dismissOnPress: true)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Command icon")
