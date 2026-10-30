@@ -21,7 +21,7 @@ jobs:
   build:
     # Use the current SDK to understand the repository's project format; compile
     # with a Ventura deployment target to surface APIs unavailable on macOS 13.
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
