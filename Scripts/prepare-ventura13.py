@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SOURCE_ROOT = ROOT / "Tinycast"
 
 NEEDS_POLYFILL = re.compile(
-    r"@(?:Observable|ObservationIgnored|Bindable)\b"
+    r"@(?:ObservationPolyfill\.)?(?:Observable|ObservationIgnored|Bindable)\b"
     r"|@Environment\s*\("
     r"|\.environment\s*\("
     r"|\bvar\s+body\s*:\s*some\s+View\b"
