@@ -268,6 +268,11 @@ def is_excluded(path: Path) -> bool:
 
 
 def main() -> None:
+    if remove_top_level_return(".return") != ".return":
+        raise RuntimeError("The result-builder transformer must preserve dotted key equivalents.")
+    if remove_top_level_return("return Text()") != "Text()":
+        raise RuntimeError("The result-builder transformer failed to remove a top-level return.")
+
     imported = 0
     wrapped = 0
     changed_files = 0
