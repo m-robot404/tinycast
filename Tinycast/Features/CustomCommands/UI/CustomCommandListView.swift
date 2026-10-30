@@ -12,7 +12,8 @@ struct CustomCommandList: View {
 
     var body: some View {
         WithObservationTracking {
-            ScrollViewReader { proxy in
+            AnyView(
+                ScrollViewReader { proxy in
                         ScrollView {
                             LazyVStack(spacing: 0) {
                                 ForEach(results, id: \.id.uuidString) { command in
@@ -40,7 +41,8 @@ struct CustomCommandList: View {
                         .scrollFollowsSelection(
                             scroll, row: selectedID?.uuidString,
                             atOrigin: selectedID != nil && selectedID == results.first?.id, proxy: proxy)
-                    }
+                }
+            )
         }
     }
 
@@ -58,8 +60,8 @@ struct CustomCommandList: View {
 
         var body: some View {
             WithObservationTracking {
-                IconCache.observeStyle()
-                            HStack(spacing: metrics.spacing.lg) {
+                let _ = IconCache.observeStyle()
+                HStack(spacing: metrics.spacing.lg) {
                                 Image(nsImage: IconCache.symbolIcon(named: command.symbol))
                                     .resizable()
                                     .frame(width: metrics.size.resultRowIcon, height: metrics.size.resultRowIcon)
