@@ -1,5 +1,4 @@
 import Foundation
-import Synchronization
 import UniformTypeIdentifiers
 
 final class FileIndex: Sendable {
@@ -71,7 +70,7 @@ final class FileIndex: Sendable {
         }
     }
 
-    private let state = Mutex(State())
+    private let state = LockedValue(State())
     private let lister = Mutex(FileIndexCrawler.Lister())
 
     var snapshot: FileIndexSnapshot? { state.withLock { $0.snapshot } }
@@ -452,7 +451,7 @@ private final class NameScores: @unchecked Sendable {
 }
 
 private final class Gathered: Sendable {
-    private let storage = Mutex<[TopHits.Hit]>([])
+    private let storage = LockedValue<[TopHits.Hit]>([])
 
     func append(_ hits: [TopHits.Hit]) { storage.withLock { $0 += hits } }
 
