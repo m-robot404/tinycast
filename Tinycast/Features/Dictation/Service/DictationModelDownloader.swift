@@ -1,7 +1,6 @@
 import CryptoKit
 import Darwin
 import Foundation
-import Synchronization
 
 enum DictationModelDownloader {
     private struct File: Decodable {
@@ -139,7 +138,7 @@ enum DictationModelDownloader {
         private let destination: URL
         private let responses: AsyncThrowingStream<URLResponse, any Error>.Continuation
         private let onProgress: @Sendable (Int64) -> Void
-        private let lastUpdate = Mutex<ContinuousClock.Instant?>(nil)
+        private let lastUpdate = LockedValue<ContinuousClock.Instant?>(nil)
 
         init(
             destination: URL, responses: AsyncThrowingStream<URLResponse, any Error>.Continuation,
