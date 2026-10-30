@@ -34,6 +34,15 @@ jobs:
           xcodebuild -version
           swift --version
 
+      - name: Regenerate Xcode project from project.yml
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v xcodegen >/dev/null 2>&1; then
+            brew install xcodegen
+          fi
+          xcodegen generate
+
       - name: Build app and embedded helpers for macOS 13
         shell: bash
         run: |
