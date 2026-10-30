@@ -119,12 +119,13 @@ struct ClipboardScreen: PaletteScreen {
     }
 
     func body(selection: Int, scroll: ScrollIntent) -> AnyView {
-        AnyView(
-            content(selection: selection, scroll: scroll)
-                .onChange(of: ClipFollowKey(id: store.items.first?.id, token: vm.followToken)) {
-                    old, new in
-                    follow(from: old, to: new)
-                }
+        let key = ClipFollowKey(id: store.items.first?.id, token: vm.followToken)
+        return AnyView(
+            ClipFollowObserver(value: key, content: content(selection: selection, scroll: scroll)) {
+                old, new in
+                guard let old else { return }
+                follow(from: old, to: new)
+            }
         )
     }
 
@@ -165,6 +166,23 @@ struct ClipboardScreen: PaletteScreen {
 private struct ClipFollowKey: Equatable {
     let id: ClipboardItem.ID?
     let token: UUID
+}
+
+private struct ClipFollowObserver<Content: View>: View {
+    let value: ClipFollowKey
+    let content: Content
+    let onChange: (ClipFollowKey?, ClipFollowKey) -> Void
+    @State private var previous: ClipFollowKey?
+
+    var body: some View {
+        content
+            .onAppear { previous = value }
+            .onChange(of: value) { newValue in
+                let oldValue = previous
+                previous = newValue
+                onChange(oldValue, newValue)
+            }
+    }
 }
 
 @MainActor
