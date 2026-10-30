@@ -66,7 +66,7 @@ final class DictationCoordinator {
             return
         }
         guard enableTask == nil else { return }
-        NSApp.activate()
+        NSApp.activate(ignoringOtherApps: true)
         enableTask = Task { [weak self] in
             guard let self else { return }
             defer { enableTask = nil }
