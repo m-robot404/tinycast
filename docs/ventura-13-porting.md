@@ -13,7 +13,7 @@
 ## Porting sequence
 
 ### Phase 1 — establish a Ventura-compatible toolchain and baseline
-- Use Xcode 15.1/15.2-era SDKs on a supported host, or a newer compiler with a macOS 13 deployment target while ensuring no unavailable SDK symbols leak into the source.
+- Use the dedicated Xcode 27 Apple Silicon CI runner with `MACOSX_DEPLOYMENT_TARGET=13.0` for compiler diagnostics. A later validation gate must still build and launch on an actual Ventura 13 Mac.
 - Keep this branch separate from `main`.
 - Run a full build of the app scheme, including embedded helper targets, with code signing disabled for CI diagnostics.
 
@@ -28,7 +28,7 @@
 - Preserve state propagation and keyboard focus behavior in tests.
 
 ### Phase 4 — helpers, permissions, and integrations
-- Build and test ClipboardTextHelper, FileIndexHelper, DictationHelper, and every embedded executable at the same deployment target.
+- Build and test ClipboardTextHelper, FileIndexHelper, DictationHelper, and every embedded executable at the same deployment target. Qwen's stateful Core ML path requires macOS 15; this branch gates Qwen to macOS 15+ and keeps Parakeet as the Ventura dictation engine.
 - Audit Vision, PDFKit, Core ML, Accessibility, Input Monitoring, login-item, Calendar/EventKit, Shortcuts, and Spaces integrations for Ventura availability and permission behavior.
 - Verify the app bundle's nested code, entitlements, signing, and update path.
 
