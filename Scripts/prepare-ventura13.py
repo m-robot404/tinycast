@@ -281,6 +281,7 @@ def main() -> None:
             continue
 
         updated, count = wrap_view_bodies(original)
+        updated = re.sub(r"(?<![A-Za-z0-9_.])@Bindable\\b", "@ObservationPolyfill.Bindable", updated)
         updated, did_import = add_import(updated)
         wrapped += count
         imported += int(did_import)
