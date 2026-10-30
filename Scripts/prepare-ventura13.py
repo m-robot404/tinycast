@@ -178,7 +178,7 @@ def remove_top_level_return(source: str) -> str:
             continue
 
         if depth == 0 and source.startswith("return", i):
-            before_ok = i == 0 or not (source[i - 1].isalnum() or source[i - 1] == "_")
+            before_ok = i == 0 or not (source[i - 1].isalnum() or source[i - 1] in "_.")
             end = i + len("return")
             after_ok = end == len(source) or not (source[end].isalnum() or source[end] == "_")
             if before_ok and after_ok:
