@@ -1,6 +1,16 @@
 import SwiftUI
 import ObservationPolyfill
 
+private struct EventMenuFramePreferenceKey: PreferenceKey {
+    static var defaultValue: [EventEditorSession.Field: CGRect] = [:]
+    static func reduce(
+        value: inout [EventEditorSession.Field: CGRect],
+        nextValue: () -> [EventEditorSession.Field: CGRect]
+    ) {
+        value.merge(nextValue(), uniquingKeysWith: { _, new in new })
+    }
+}
+
 struct EventEditorView: View {
     @ObservationPolyfill.Bindable var editor: EventEditorSession
     let openMenuCorner: MenuPanelCorner?
@@ -53,21 +63,20 @@ struct EventEditorView: View {
                         .padding(.horizontal, metrics.spacing.xxxl * 2)
                         .padding(.vertical, metrics.spacing.md)
                     }
-                    .scrollClipDisabled()
                     .edgeDissolve()
-                    .focusEffectDisabled()
+                    .onPreferenceChange(EventMenuFramePreferenceKey.self) { menuFrames = $0 }
                     .task(id: palette.focusToken) {
                         palette.noteEditingField(true)
                         await Task.yield()
                         guard !Task.isCancelled else { return }
                         focusedField = editor.focusedField
                     }
-                    .onChange(of: editor.focusedField) { _, field in focusedField = field }
-                    .onChange(of: focusedField) { _, field in
+                    .onChange(of: editor.focusedField) { field in focusedField = field }
+                    .onChange(of: focusedField) { field in
                         if let field { editor.focusedField = field }
                         focusedControl = field == .title ? nil : field
                     }
-                    .onChange(of: focusedControl) { _, field in
+                    .onChange(of: focusedControl) { field in
                         if let field { focusedField = field }
                     }
                     .onDisappear {
@@ -99,31 +108,30 @@ struct EventEditorView: View {
                 PopoverMenuContent(items: items), .belowControl(frame),
                 values.firstIndex(of: selection.wrappedValue) ?? 0)
         }
-        return HStack {
-            Text(label(selection.wrappedValue))
-            Spacer()
-            Image(systemName: "chevron.down")
-                .font(metrics.typography.disclosure)
-                .foregroundStyle(Theme.Colors.textSecondary)
-                .rotationEffect(.degrees(isOpen ? 180 : 0))
-                .animation(reduceMotion ? nil : Theme.MenuMotion.chevronAnimation, value: isOpen)
+        return Button(action: open) {
+            HStack {
+                Text(label(selection.wrappedValue))
+                Spacer()
+                Image(systemName: "chevron.down")
+                    .font(metrics.typography.disclosure)
+                    .foregroundStyle(Theme.Colors.textSecondary)
+                    .rotationEffect(.degrees(isOpen ? 180 : 0))
+                    .animation(reduceMotion ? nil : Theme.MenuMotion.chevronAnimation, value: isOpen)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, metrics.spacing.xl)
+            .frame(height: metrics.size.dialogButtonHeight)
+            .contentShape(.rect)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, metrics.spacing.xl)
-        .frame(height: metrics.size.dialogButtonHeight)
-        .contentShape(.rect)
-        .onTapGesture(perform: open)
-        .focusable()
+        .buttonStyle(.plain)
         .focused($focusedControl, equals: field)
-        .onKeyPress(keys: [.return, .space, .downArrow]) { _ in
-            open()
-            return .handled
-        }
-        .onGeometryChange(for: CGRect.self) {
-            $0.frame(in: .global)
-        } action: {
-            menuFrames[field] = $0
-        }
+        .background(
+            GeometryReader { proxy in
+                Color.clear.preference(
+                    key: EventMenuFramePreferenceKey.self,
+                    value: [field: proxy.frame(in: .global)])
+            }
+        )
         .formFieldChrome(focused: focusedField == field)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(title)
