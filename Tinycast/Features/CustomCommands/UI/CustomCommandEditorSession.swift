@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 import ObservationPolyfill
 
@@ -28,7 +29,7 @@ final class CustomCommandEditorSession {
     var requiresConfirmation: Bool
     var showsConfirmation: Bool
     var showsOutput: Bool
-    var selection: TextSelection?
+    var selection: NSRange?
     var focusedField: Field = .name
     var errorMessage: String?
 
