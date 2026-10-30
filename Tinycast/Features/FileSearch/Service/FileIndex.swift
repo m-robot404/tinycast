@@ -71,7 +71,7 @@ final class FileIndex: Sendable {
     }
 
     private let state = LockedValue(State())
-    private let lister = Mutex(FileIndexCrawler.Lister())
+    private let lister = LockedValue(FileIndexCrawler.Lister())
 
     var snapshot: FileIndexSnapshot? { state.withLock { $0.snapshot } }
 
