@@ -20,8 +20,15 @@ final class DictationCapture {
     }
 
     static var microphones: [AVCaptureDevice] {
-        AVCaptureDevice.DiscoverySession(
-            deviceTypes: [.microphone, .external], mediaType: .audio, position: .unspecified
+        let deviceTypes: [AVCaptureDevice.DeviceType]
+        if #available(macOS 14.0, *) {
+            deviceTypes = [.microphone, .external]
+        } else {
+            // Ventura exposes external microphones, including Continuity Camera, as externalUnknown.
+            deviceTypes = [.builtInMicrophone, .externalUnknown]
+        }
+        return AVCaptureDevice.DiscoverySession(
+            deviceTypes: deviceTypes, mediaType: .audio, position: .unspecified
         ).devices
     }
 
