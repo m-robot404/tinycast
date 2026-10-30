@@ -19,7 +19,9 @@ permissions:
 
 jobs:
   build:
-    runs-on: macos-15
+    # Use the current SDK to understand the repository's project format; compile
+    # with a Ventura deployment target to surface APIs unavailable on macOS 13.
+    runs-on: macos-26
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
@@ -28,7 +30,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          XCODE_PATH="$(find -E /Applications -maxdepth 1 -type d -regex '.*/Xcode_27(\\.[0-9]+)*\\.app' | sort -V | tail -n1)"
+          XCODE_PATH="$(find -E /Applications -maxdepth 1 -type d -regex '.*/Xcode_27(\.[0-9]+)*\.app' | sort -V | tail -n1)"
           if [[ -z "$XCODE_PATH" ]]; then
             echo "::error::No released Xcode 27.x found on this runner image."
             ls -1 /Applications | grep -i Xcode || true
