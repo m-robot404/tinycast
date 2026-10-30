@@ -140,6 +140,55 @@ def code_mask(source: str) -> list[bool]:
     return mask
 
 
+def remove_top_level_return(source: str) -> str:
+    """Remove a result-builder body's explicit top-level return, if present."""
+    depth = 0
+    i = 0
+    while i < len(source):
+        if source.startswith("//", i):
+            newline = source.find("\n", i + 2)
+            i = len(source) if newline < 0 else newline + 1
+            continue
+        if source.startswith("/*", i):
+            i += 2
+            comment_depth = 1
+            while i < len(source) and comment_depth:
+                if source.startswith("/*", i):
+                    comment_depth += 1
+                    i += 2
+                elif source.startswith("*/", i):
+                    comment_depth -= 1
+                    i += 2
+                else:
+                    i += 1
+            continue
+
+        string_end = skip_string(source, i)
+        if string_end is not None:
+            i = string_end
+            continue
+
+        if source[i] == "{":
+            depth += 1
+            i += 1
+            continue
+        if source[i] == "}":
+            depth -= 1
+            i += 1
+            continue
+
+        if depth == 0 and source.startswith("return", i):
+            before_ok = i == 0 or not (source[i - 1].isalnum() or source[i - 1] == "_")
+            end = i + len("return")
+            after_ok = end == len(source) or not (source[end].isalnum() or source[end] == "_")
+            if before_ok and after_ok:
+                while end < len(source) and source[end] in " \t":
+                    end += 1
+                return source[:i] + source[end:]
+        i += 1
+    return source
+
+
 def wrap_view_bodies(source: str) -> tuple[str, int]:
     mask = code_mask(source)
     matches = [match for match in VIEW_BODY.finditer(source) if mask[match.start()]]
@@ -150,7 +199,14 @@ def wrap_view_bodies(source: str) -> tuple[str, int]:
         closing = matching_brace(source, opening)
         body = source[opening + 1 : closing]
 
-        if re.match(r"\s*WithObservationTracking\s*\{", body):
+        existing_wrapper = re.match(r"\s*WithObservationTracking\s*\{", body)
+        if existing_wrapper:
+            wrapper_open = opening + 1 + existing_wrapper.end() - 1
+            wrapper_close = matching_brace(source, wrapper_open)
+            wrapper_body = source[wrapper_open + 1 : wrapper_close]
+            cleaned = remove_top_level_return(wrapper_body)
+            if cleaned != wrapper_body:
+                source = source[: wrapper_open + 1] + cleaned + source[wrapper_close:]
             continue
 
         inner = body.strip()
@@ -158,7 +214,7 @@ def wrap_view_bodies(source: str) -> tuple[str, int]:
             continue
 
         # Result-builder closures accept the expression directly, not an explicit return.
-        inner = re.sub(r"^return\s+", "", inner, count=1)
+        inner = remove_top_level_return(inner)
 
         line_start = source.rfind("\n", 0, match.start()) + 1
         outer_indent = re.match(r"[ \t]*", source[line_start : match.start()]).group(0)
