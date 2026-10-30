@@ -54,7 +54,8 @@ struct ClipboardList: View {
     var body: some View {
         WithObservationTracking {
             let rows = rows
-                    ScrollViewReader { proxy in
+            AnyView(
+                ScrollViewReader { proxy in
                         ScrollView {
                             LazyVStack(spacing: 0) {
                                 ForEach(rows) { row in
@@ -94,7 +95,8 @@ struct ClipboardList: View {
                         // Snap to the origin on the first row so its section header shows too.
                         .scrollFollowsSelection(
                             scroll, row: selectedID?.uuidString, atOrigin: firstRowSelected, proxy: proxy)
-                    }
+                }
+            )
         }
     }
 }
