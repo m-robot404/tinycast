@@ -7,8 +7,9 @@
 1. The upstream baseline declared macOS 26.0 and Swift 6.0. This branch now lowers both `project.yml` and the checked-in Xcode project to macOS 13.0 while retaining Swift 6 language mode.
 2. `docs/development.md` requires macOS 26 and Xcode 27, explicitly citing Liquid Glass and the SwiftUI macro plugin.
 3. `Tinycast/DesignSystem/GlassEffectView.swift` originally instantiated `NSGlassEffectView` unconditionally. This branch now guards the newer symbol and provides an `NSVisualEffectView` fallback; the compatibility build must still confirm it compiles against an older SDK.
-4. The architecture document records 39 `@Observable` model types, and `AppCore.swift` is one concrete example. SwiftUI's native Observation integration begins at macOS 14, so Ventura needs a deliberate compatibility implementation (for example, a tested Observation backport plus corresponding SwiftUI view/environment changes) or a larger migration to `ObservableObject` / `@Published`.
-5. The project embeds several helper applications and has extensive use of AppKit, SwiftUI, system services, and modern APIs. Each helper target and every API newer than macOS 13 must be audited independently; compiling only the main app target is insufficient.
+4. Clipboard OCR originally used the macOS 15 Swift Vision request API. This branch now uses the older `VNRecognizeTextRequest` API supported on Ventura.
+5. The architecture document records 39 `@Observable` model types, and `AppCore.swift` is one concrete example. SwiftUI's native Observation integration begins at macOS 14, so Ventura needs a deliberate compatibility implementation (for example, a tested Observation backport plus corresponding SwiftUI view/environment changes) or a larger migration to `ObservableObject` / `@Published`.
+6. The project embeds several helper applications and has extensive use of AppKit, SwiftUI, system services, and modern APIs. Each helper target and every API newer than macOS 13 must be audited independently; compiling only the main app target is insufficient.
 
 ## Porting sequence
 
@@ -19,7 +20,7 @@
 
 ### Phase 2 — platform compatibility layer
 - [x] Replace the direct `NSGlassEffectView` dependency with a platform abstraction. The branch now uses native glass only with a sufficiently new compiler on macOS 26+, and falls back to `NSVisualEffectView` on Ventura.
-- Inventory all macOS 14–26 API references and add compile-time/runtime fallbacks where a Ventura equivalent exists.
+- [x] Replace the macOS 15-only Swift Vision `RecognizeTextRequest` calls in clipboard OCR with Ventura-compatible `VNRecognizeTextRequest` and `VNImageRequestHandler`.
 - Remove or replace APIs with no safe Ventura equivalent; do not silently no-op essential launcher behavior.
 
 ### Phase 3 — observation and UI migration
@@ -42,7 +43,8 @@
 
 - `project.yml` and `Tinycast.xcodeproj/project.pbxproj` on this branch: macOS 13.0 deployment target; Swift language mode remains 6.0.
 - `docs/development.md`: macOS 26 / Xcode 27 toolchain requirement.
-- `Tinycast/DesignSystem/GlassEffectView.swift`: direct `NSGlassEffectView` use.
+- `Tinycast/DesignSystem/GlassEffectView.swift`: guarded native glass view with AppKit fallback.
+- `Tinycast/Features/Clipboard/Service/ClipboardTextExtractor.swift`: Ventura-compatible Vision OCR path.
 - `Tinycast/App/AppCore.swift`: native `@Observable` usage.
 - Apple documents SwiftUI Observation support from macOS 14: https://developer.apple.com/documentation/swiftui/migrating-from-the-observable-object-protocol-to-the-observable-macro
 
