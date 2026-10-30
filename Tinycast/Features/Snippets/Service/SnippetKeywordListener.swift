@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 import Carbon.HIToolbox
 
 private func snippetKeywordCallback(

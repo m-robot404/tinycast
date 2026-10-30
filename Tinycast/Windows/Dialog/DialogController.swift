@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 import SwiftUI
 
 /// Tinycast's own dialogs; `NSAlert`'s nested run loop would let hotkeys stack them.

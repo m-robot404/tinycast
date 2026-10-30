@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct RoomPickerList: View {
     @Environment(\.metrics) private var metrics
@@ -12,27 +13,29 @@ struct RoomPickerList: View {
     private var firstRowSelected: Bool { selectedID != nil && selectedID == rows.first?.id }
 
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(spacing: 0) {
-                    ForEach(rows) { row in
-                        RoomPickerRowView(
-                            row: row, place: picked.firstIndex(of: row.pick).map { $0 + 1 },
-                            selected: row.id == selectedID
-                        )
-                        .selectionFrame(row.id == selectedID)
-                        .contentShape(Rectangle())
-                        .onTapGesture { onActivate(row) }
+        WithObservationTracking {
+            ScrollViewReader { proxy in
+                        ScrollView {
+                            LazyVStack(spacing: 0) {
+                                ForEach(rows) { row in
+                                    RoomPickerRowView(
+                                        row: row, place: picked.firstIndex(of: row.pick).map { $0 + 1 },
+                                        selected: row.id == selectedID
+                                    )
+                                    .selectionFrame(row.id == selectedID)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture { onActivate(row) }
+                                }
+                            }
+                            .padding(.horizontal, metrics.spacing.md)
+                            .padding(.vertical, metrics.spacing.md)
+                            .hideNativeScrollers()
+                            .scrollOriginAnchor()
+                        }
+                        .edgeDissolve()
+                        .thinScrollbar()
+                        .scrollFollowsSelection(scroll, row: selectedID, atOrigin: firstRowSelected, proxy: proxy)
                     }
-                }
-                .padding(.horizontal, metrics.spacing.md)
-                .padding(.vertical, metrics.spacing.md)
-                .hideNativeScrollers()
-                .scrollOriginAnchor()
-            }
-            .edgeDissolve()
-            .thinScrollbar()
-            .scrollFollowsSelection(scroll, row: selectedID, atOrigin: firstRowSelected, proxy: proxy)
         }
     }
 }
@@ -80,38 +83,40 @@ private struct RoomPickerRowView: View {
     }
 
     var body: some View {
-        HStack(spacing: metrics.spacing.lg) {
-            badge
-            Group {
-                if let appURL {
-                    EntryIconView(source: .file(stamp: FileIconStamp.value(for: appURL)), fileURL: appURL)
-                } else {
-                    EntryIconView(source: .symbol("macwindow"))
-                }
-            }
-            .frame(width: metrics.size.resultRowIcon, height: metrics.size.resultRowIcon)
-            Text(title)
-                .font(metrics.typography.rowTitle)
-                .lineLimit(1)
-                .truncationMode(.middle)
-            Spacer(minLength: metrics.spacing.md)
-            Text(trailing)
-                .font(metrics.typography.rowTrailing)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
+        WithObservationTracking {
+            HStack(spacing: metrics.spacing.lg) {
+                        badge
+                        Group {
+                            if let appURL {
+                                EntryIconView(source: .file(stamp: FileIconStamp.value(for: appURL)), fileURL: appURL)
+                            } else {
+                                EntryIconView(source: .symbol("macwindow"))
+                            }
+                        }
+                        .frame(width: metrics.size.resultRowIcon, height: metrics.size.resultRowIcon)
+                        Text(title)
+                            .font(metrics.typography.rowTitle)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                        Spacer(minLength: metrics.spacing.md)
+                        Text(trailing)
+                            .font(metrics.typography.rowTrailing)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                    .padding(.horizontal, metrics.spacing.md)
+                    .padding(.vertical, metrics.spacing.sm)
+                    .background(
+                        RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous).fill(fill)
+                    )
+                    .armedHover($hovered)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel(title)
+                    .accessibilityValue(
+                        place.map { String(localized: "\(trailing), number \($0) in the room") } ?? trailing
+                    )
+                    .accessibilityAddTraits(selected ? .isSelected : [])
         }
-        .padding(.horizontal, metrics.spacing.md)
-        .padding(.vertical, metrics.spacing.sm)
-        .background(
-            RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous).fill(fill)
-        )
-        .armedHover($hovered)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(title)
-        .accessibilityValue(
-            place.map { String(localized: "\(trailing), number \($0) in the room") } ?? trailing
-        )
-        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
     private var badge: some View {

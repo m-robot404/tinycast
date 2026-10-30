@@ -19,7 +19,7 @@ RAM.**
          src="https://img.shields.io/badge/Discord-Join-5865F2?style=flat&logo=discord&logoColor=white"></a>
 </p>
 
-SwiftUI and AppKit, **zero third-party dependencies**, no Electron and no telemetry. It also **runs
+SwiftUI and AppKit, with a small pinned Observation backport for Ventura 13; no Electron and no telemetry. It also **runs
 real Raycast extensions**, rendered as native SwiftUI. Free, open source, and staying that way.
 
 For anything private, email [iabueammar@gmail.com](mailto:iabueammar@gmail.com).

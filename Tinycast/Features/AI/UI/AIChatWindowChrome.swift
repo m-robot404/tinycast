@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 
 /// The AI Chat window's toolbar, title and chords; it lives exactly as long as the window does.
 @MainActor

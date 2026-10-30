@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 /// Every saved conversation, pinned first and then by day; selecting one opens it on the right.
 struct AIChatSidebarView: View {
@@ -36,20 +37,22 @@ struct AIChatSidebarView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            ChatSearchField(query: $query, focused: $searchFocused)
-                .padding(.horizontal, Theme.Spacing.lg)
-                .padding(.bottom, Theme.Spacing.md)
-            list
-        }
-        // The field sits under the toolbar's material, so it needs its own clearance from the top.
-        .padding(.top, Theme.Spacing.md)
-        .onExitCommand {
-            if query.isEmpty {
-                _ = coordinator.closeWindowIfKey()
-            } else {
-                query = ""
-            }
+        WithObservationTracking {
+            VStack(spacing: 0) {
+                        ChatSearchField(query: $query, focused: $searchFocused)
+                            .padding(.horizontal, Theme.Spacing.lg)
+                            .padding(.bottom, Theme.Spacing.md)
+                        list
+                    }
+                    // The field sits under the toolbar's material, so it needs its own clearance from the top.
+                    .padding(.top, Theme.Spacing.md)
+                    .onExitCommand {
+                        if query.isEmpty {
+                            _ = coordinator.closeWindowIfKey()
+                        } else {
+                            query = ""
+                        }
+                    }
         }
     }
 
@@ -176,27 +179,29 @@ private struct ChatSidebarRow<Title: View>: View {
     @State private var isHovered = false
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.sm) {
-            title
-            Spacer(minLength: 0)
-            if isAnswering {
-                ProgressView()
-                    .controlSize(.mini)
-                    .accessibilityLabel("Answering")
-            } else if conversation.isPinned {
-                Image(systemName: "pin.fill")
-                    .font(.caption)
-                    .foregroundStyle(.tertiary)
-                    .accessibilityLabel("Pinned")
-            }
+        WithObservationTracking {
+            HStack(spacing: Theme.Spacing.sm) {
+                        title
+                        Spacer(minLength: 0)
+                        if isAnswering {
+                            ProgressView()
+                                .controlSize(.mini)
+                                .accessibilityLabel("Answering")
+                        } else if conversation.isPinned {
+                            Image(systemName: "pin.fill")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                                .accessibilityLabel("Pinned")
+                        }
+                    }
+                    // The whole cell, so the pointer never crosses a gap where no row is hovered.
+                    .frame(maxHeight: .infinity)
+                    .listRowInsets(EdgeInsets())
+                    .contentShape(.rect)
+                    .onHover { isHovered = $0 }
+                    .listRowBackground(hoverFill)
+                    .help(conversation.displayTitle)
         }
-        // The whole cell, so the pointer never crosses a gap where no row is hovered.
-        .frame(maxHeight: .infinity)
-        .listRowInsets(EdgeInsets())
-        .contentShape(.rect)
-        .onHover { isHovered = $0 }
-        .listRowBackground(hoverFill)
-        .help(conversation.displayTitle)
     }
 
     /// Inset and rounded as the system's selection is, so the two read as one shape.
@@ -215,30 +220,32 @@ private struct ChatSearchField: View {
     @FocusState.Binding var focused: Bool
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.sm) {
-            Image(systemName: "magnifyingglass")
-                .foregroundStyle(.secondary)
-            TextField("", text: $query, prompt: Text("Search"))
-                .textFieldStyle(.plain)
-                .labelsHidden()
-                .focused($focused)
-                .pointerStyle(.horizontalText)
-            if !query.isEmpty {
-                Button {
-                    query = ""
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.tertiary)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Clear search")
-            }
+        WithObservationTracking {
+            HStack(spacing: Theme.Spacing.sm) {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundStyle(.secondary)
+                        TextField("", text: $query, prompt: Text("Search"))
+                            .textFieldStyle(.plain)
+                            .labelsHidden()
+                            .focused($focused)
+                            .pointerStyle(.horizontalText)
+                        if !query.isEmpty {
+                            Button {
+                                query = ""
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(.tertiary)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Clear search")
+                        }
+                    }
+                    .padding(.horizontal, Theme.Spacing.lg)
+                    .frame(height: Theme.Size.aiChatSearchField)
+                    .background { Color.clear.frosted(in: Capsule()) }
+                    .contentShape(.rect)
+                    .onTapGesture { focused = true }
+                    .accessibilityLabel("Search chats")
         }
-        .padding(.horizontal, Theme.Spacing.lg)
-        .frame(height: Theme.Size.aiChatSearchField)
-        .background { Color.clear.frosted(in: Capsule()) }
-        .contentShape(.rect)
-        .onTapGesture { focused = true }
-        .accessibilityLabel("Search chats")
     }
 }

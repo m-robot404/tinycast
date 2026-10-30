@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 import SwiftUI
 
 struct WindowLayoutPreview: View {
@@ -8,22 +9,24 @@ struct WindowLayoutPreview: View {
     let gap: CGFloat
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.md) {
-            // Greedy: the canvas letterboxes itself, so slack spent here is drawing, not margin.
-            WindowLayoutPreviewCanvas(draft: draft, screen: selectedScreen, gap: gap)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        WithObservationTracking {
+            VStack(alignment: .leading, spacing: Theme.Spacing.md) {
+                        // Greedy: the canvas letterboxes itself, so slack spent here is drawing, not margin.
+                        WindowLayoutPreviewCanvas(draft: draft, screen: selectedScreen, gap: gap)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            // Beside the caption, not over the canvas: a tab must never cover a window rect.
-            HStack(spacing: Theme.Spacing.md) {
-                Text(caption)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                Spacer(minLength: 0)
-                WindowLayoutDisplayTabs(draft: draft, displays: tabs)
-            }
+                        // Beside the caption, not over the canvas: a tab must never cover a window rect.
+                        HStack(spacing: Theme.Spacing.md) {
+                            Text(caption)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                            Spacer(minLength: 0)
+                            WindowLayoutDisplayTabs(draft: draft, displays: tabs)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var tabs: [WindowLayoutDisplay] {
@@ -57,27 +60,29 @@ struct WindowLayoutPreviewCanvas: View {
     @Environment(AppIndex.self) private var appIndex
 
     var body: some View {
-        GeometryReader { proxy in
-            ZStack {
-                if let screen {
-                    // The plate is the display itself, at its own aspect ratio.
-                    let ground = ground(in: proxy.size, display: screen.screen.visibleFrame)
-                    plate
-                        .frame(width: ground.width, height: ground.height)
-                        .position(x: ground.midX, y: ground.midY)
-                    ForEach(placements(on: screen), id: \.entry.id) { placed in
-                        entryRect(placed, ground: ground, display: screen.screen.visibleFrame)
+        WithObservationTracking {
+            GeometryReader { proxy in
+                        ZStack {
+                            if let screen {
+                                // The plate is the display itself, at its own aspect ratio.
+                                let ground = ground(in: proxy.size, display: screen.screen.visibleFrame)
+                                plate
+                                    .frame(width: ground.width, height: ground.height)
+                                    .position(x: ground.midX, y: ground.midY)
+                                ForEach(placements(on: screen), id: \.entry.id) { placed in
+                                    entryRect(placed, ground: ground, display: screen.screen.visibleFrame)
+                                }
+                            } else {
+                                plate
+                                Text("This display isn't connected.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
                     }
-                } else {
-                    plate
-                    Text("This display isn't connected.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-            }
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(accessibilityDescription)
         }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(accessibilityDescription)
     }
 
     private var plate: some View {

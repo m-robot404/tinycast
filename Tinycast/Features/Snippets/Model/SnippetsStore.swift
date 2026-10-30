@@ -1,4 +1,5 @@
 import Darwin
+import ObservationPolyfill
 import Foundation
 
 @MainActor

@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 import Observation
 
 /// Owns custom commands: the library, the one run funnel with its gates, and a deletion's cleanup.
@@ -133,7 +134,7 @@ final class CustomCommandCoordinator {
             panel.directoryURL = URL(
                 fileURLWithPath: (editor.workingDirectory as NSString).expandingTildeInPath)
         }
-        NSApp.activate()
+        NSApp.activate(ignoringOtherApps: true)
         guard panel.runModal() == .OK, let url = panel.url, self.editor === editor else { return }
         editor.workingDirectory = (url.path as NSString).abbreviatingWithTildeInPath
     }

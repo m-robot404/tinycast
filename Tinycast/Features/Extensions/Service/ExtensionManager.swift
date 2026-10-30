@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 import Foundation
 
 enum ExtensionSessionState: Equatable {

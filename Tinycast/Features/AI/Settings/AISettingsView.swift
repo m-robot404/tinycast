@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct AISettingsView: View {
     @Environment(AppCore.self) private var core
@@ -10,53 +11,55 @@ struct AISettingsView: View {
     @State private var providersPresented = false
 
     var body: some View {
-        @Bindable var appSettings = appSettings
-        @Bindable var settings = settings
-        return Form {
-            Section {
-                Toggle(isOn: $appSettings.aiEnabled) {
-                    SettingsFeatureToggleLabel(
-                        anchor: .aiAI, title: "Enable AI",
-                        subtitle: "Nothing is loaded or sent while it is off.")
-                }
-                SettingsRow(
-                    title: "Providers", subtitle: providerSummary, anchor: .aiProviders
-                ) {
-                    Button("Manage…") { providersPresented = true }
-                }
-            } header: {
-                SettingsSectionHeader(.aiAI)
-            }
+        WithObservationTracking {
+            @ObservationPolyfill.Bindable var appSettings = appSettings
+                    @ObservationPolyfill.Bindable var settings = settings
+                    Form {
+                        Section {
+                            Toggle(isOn: $appSettings.aiEnabled) {
+                                SettingsFeatureToggleLabel(
+                                    anchor: .aiAI, title: "Enable AI",
+                                    subtitle: "Nothing is loaded or sent while it is off.")
+                            }
+                            SettingsRow(
+                                title: "Providers", subtitle: providerSummary, anchor: .aiProviders
+                            ) {
+                                Button("Manage…") { providersPresented = true }
+                            }
+                        } header: {
+                            SettingsSectionHeader(.aiAI)
+                        }
 
-            FeatureCommandsSection(owner: .ai, anchor: .aiCommands)
-                .settingsEnabled(appSettings.aiEnabled)
+                        FeatureCommandsSection(owner: .ai, anchor: .aiCommands)
+                            .settingsEnabled(appSettings.aiEnabled)
 
-            Group {
-                defaultModelSection
-                chatSection
-                conversationsSection
-                systemPromptSection
-                MCPSettingsSection()
-            }
-            .settingsEnabled(appSettings.aiEnabled)
+                        Group {
+                            defaultModelSection
+                            chatSection
+                            conversationsSection
+                            systemPromptSection
+                            MCPSettingsSection()
+                        }
+                        .settingsEnabled(appSettings.aiEnabled)
+                    }
+                    .formStyle(.grouped)
+                    .settingsScrollTarget(.ai)
+                    .settingsEditorPanel(isPresented: $providersPresented) {
+                        AIProvidersPanel(onDone: { providersPresented = false })
+                    }
+                    .onAppear {
+                        core.applyInstalledAILifecycle()
+                    }
+                    // Switched on with the pane already open, provider status would otherwise stay empty.
+                    .onChange(of: appSettings.aiEnabled) { core.applyInstalledAILifecycle() }
+                    .onChange(of: settings.enabledInstalledProviders) {
+                        core.applyInstalledAILifecycle()
+                        syncSelection()
+                    }
+                    .onChange(of: subscription.models) { syncSelection() }
+                    .onChange(of: subscription.phase) { syncSelection() }
+                    .onChange(of: installedAI.statuses) { syncSelection() }
         }
-        .formStyle(.grouped)
-        .settingsScrollTarget(.ai)
-        .settingsEditorPanel(isPresented: $providersPresented) {
-            AIProvidersPanel(onDone: { providersPresented = false })
-        }
-        .onAppear {
-            core.applyInstalledAILifecycle()
-        }
-        // Switched on with the pane already open, provider status would otherwise stay empty.
-        .onChange(of: appSettings.aiEnabled) { core.applyInstalledAILifecycle() }
-        .onChange(of: settings.enabledInstalledProviders) {
-            core.applyInstalledAILifecycle()
-            syncSelection()
-        }
-        .onChange(of: subscription.models) { syncSelection() }
-        .onChange(of: subscription.phase) { syncSelection() }
-        .onChange(of: installedAI.statuses) { syncSelection() }
     }
 
     private var defaultModelSection: some View {
@@ -118,7 +121,7 @@ struct AISettingsView: View {
     }
 
     private var chatSection: some View {
-        @Bindable var settings = settings
+        @ObservationPolyfill.Bindable var settings = settings
         return Section {
             Toggle(isOn: $settings.webSearchEnabled) {
                 SettingsRowTitle(.aiChat, "Web search")
@@ -144,7 +147,7 @@ struct AISettingsView: View {
     }
 
     private var conversationsSection: some View {
-        @Bindable var settings = settings
+        @ObservationPolyfill.Bindable var settings = settings
         return Section {
             Picker(selection: $settings.opensTo) {
                 ForEach(AIOpensTo.allCases) { Text($0.title).tag($0) }
@@ -175,7 +178,7 @@ struct AISettingsView: View {
     }
 
     private var systemPromptSection: some View {
-        @Bindable var settings = settings
+        @ObservationPolyfill.Bindable var settings = settings
         return Section {
             Toggle(isOn: $settings.systemPromptEnabled) {
                 SettingsRowTitle(.aiSystemPrompt, "Send a system prompt")

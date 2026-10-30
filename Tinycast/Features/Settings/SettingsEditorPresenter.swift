@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 import SwiftUI
 
 /// One stack per Settings window: bindings own presentation state, this owns only AppKit edges.

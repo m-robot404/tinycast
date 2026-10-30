@@ -1,4 +1,5 @@
 import Foundation
+import ObservationPolyfill
 
 /// A short-lived run of a command, bounded by a watchdog, an output cap and cancellation.
 enum InstalledAIProbe {

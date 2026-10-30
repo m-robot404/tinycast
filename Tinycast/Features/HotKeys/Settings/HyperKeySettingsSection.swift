@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct HyperKeySettingsSection: View {
     @Environment(AppCore.self) private var core
@@ -32,77 +33,79 @@ struct HyperKeySettingsSection: View {
     }
 
     var body: some View {
-        @Bindable var settings = settings
-        Section {
-            Picker(selection: hyperKeySelection) {
-                ForEach(HyperKeyPhysicalKey.allCases) { key in
-                    Text(key.title).tag(key)
-                }
-            } label: {
-                SettingsRowTitle(.generalHyperKey, "Hyper Key")
-                Text(hyperSubtitle)
-            }
+        WithObservationTracking {
+            @ObservationPolyfill.Bindable var settings = settings
+                    Section {
+                        Picker(selection: hyperKeySelection) {
+                            ForEach(HyperKeyPhysicalKey.allCases) { key in
+                                Text(key.title).tag(key)
+                            }
+                        } label: {
+                            SettingsRowTitle(.generalHyperKey, "Hyper Key")
+                            Text(hyperSubtitle)
+                        }
 
-            if settings.hyperKey != .none {
-                HyperKeyStatusRow(
-                    status: manager.status, takeover: takeover, isShowingDiagnostics: diagnostics != nil
-                ) {
-                    diagnostics = diagnostics == nil ? manager.diagnostics() : nil
-                    takeover = manager.takeover()
-                }
-            }
+                        if settings.hyperKey != .none {
+                            HyperKeyStatusRow(
+                                status: manager.status, takeover: takeover, isShowingDiagnostics: diagnostics != nil
+                            ) {
+                                diagnostics = diagnostics == nil ? manager.diagnostics() : nil
+                                takeover = manager.takeover()
+                            }
+                        }
 
-            if settings.hyperKey.hasOriginalFunction {
-                Picker(selection: $settings.hyperKeyQuickPress) {
-                    Text("Does Nothing").tag(HyperKeyQuickPress.none)
-                    if let original = settings.hyperKey.quickPressOriginalTitle {
-                        Text(original).tag(HyperKeyQuickPress.originalKey)
+                        if settings.hyperKey.hasOriginalFunction {
+                            Picker(selection: $settings.hyperKeyQuickPress) {
+                                Text("Does Nothing").tag(HyperKeyQuickPress.none)
+                                if let original = settings.hyperKey.quickPressOriginalTitle {
+                                    Text(original).tag(HyperKeyQuickPress.originalKey)
+                                }
+                                Text("Trigger Escape").tag(HyperKeyQuickPress.escape)
+                            } label: {
+                                SettingsRowTitle(.generalHyperKey, "Quick Press")
+                                Text("When you press and release \(settings.hyperKey.title) on its own.")
+                            }
+                        }
+
+                        Toggle(isOn: $settings.hyperKeyIncludesShift) {
+                            SettingsRowTitle(.generalHyperKey, "Include Shift (⇧)")
+                        }
+                        // Flipping it re-points recorded chords, so it needs a chord to mean.
+                        .settingsEnabled(settings.hyperKey != .none)
+
+                        if settings.hyperKey.supportsSecureInputCompatibility {
+                            Toggle(isOn: $settings.hyperKeySecureInputCompatibility) {
+                                SettingsRowTitle(.generalHyperKey, "Secure Input Compatibility")
+                                Text(
+                                    """
+                                    Tinycast's Hyper shortcuts also work in password fields and secure terminals, \
+                                    where Right Control (⌃) with the same key triggers them. \
+                                    While on, Right Control (⌃) acts as the Hyper Key too.
+                                    """)
+                            }
+                        }
+                    } header: {
+                        SettingsSectionHeader(.generalHyperKey)
                     }
-                    Text("Trigger Escape").tag(HyperKeyQuickPress.escape)
-                } label: {
-                    SettingsRowTitle(.generalHyperKey, "Quick Press")
-                    Text("When you press and release \(settings.hyperKey.title) on its own.")
-                }
-            }
+                    .onAppear { takeover = manager.takeover() }
+                    .onChange(of: manager.status) {
+                        takeover = manager.takeover()
+                        if diagnostics != nil { diagnostics = manager.diagnostics() }
+                    }
 
-            Toggle(isOn: $settings.hyperKeyIncludesShift) {
-                SettingsRowTitle(.generalHyperKey, "Include Shift (⇧)")
-            }
-            // Flipping it re-points recorded chords, so it needs a chord to mean.
-            .settingsEnabled(settings.hyperKey != .none)
-
-            if settings.hyperKey.supportsSecureInputCompatibility {
-                Toggle(isOn: $settings.hyperKeySecureInputCompatibility) {
-                    SettingsRowTitle(.generalHyperKey, "Secure Input Compatibility")
-                    Text(
-                        """
-                        Tinycast's Hyper shortcuts also work in password fields and secure terminals, \
-                        where Right Control (⌃) with the same key triggers them. \
-                        While on, Right Control (⌃) acts as the Hyper Key too.
-                        """)
-                }
-            }
-        } header: {
-            SettingsSectionHeader(.generalHyperKey)
-        }
-        .onAppear { takeover = manager.takeover() }
-        .onChange(of: manager.status) {
-            takeover = manager.takeover()
-            if diagnostics != nil { diagnostics = manager.diagnostics() }
-        }
-
-        if let diagnostics, settings.hyperKey != .none {
-            HyperKeyDiagnosticsSection(
-                diagnostics: diagnostics,
-                refresh: {
-                    self.diagnostics = manager.diagnostics()
-                    takeover = self.diagnostics?.takeover
-                },
-                restart: {
-                    manager.restart()
-                    self.diagnostics = manager.diagnostics()
-                    takeover = self.diagnostics?.takeover
-                })
+                    if let diagnostics, settings.hyperKey != .none {
+                        HyperKeyDiagnosticsSection(
+                            diagnostics: diagnostics,
+                            refresh: {
+                                self.diagnostics = manager.diagnostics()
+                                takeover = self.diagnostics?.takeover
+                            },
+                            restart: {
+                                manager.restart()
+                                self.diagnostics = manager.diagnostics()
+                                takeover = self.diagnostics?.takeover
+                            })
+                    }
         }
     }
 
@@ -113,16 +116,18 @@ struct HyperKeySettingsSection: View {
         let toggleDiagnostics: () -> Void
 
         var body: some View {
-            SettingsRow(title: String(localized: "Status"), subtitle: detail, subtitleLineLimit: 3) {
-                HStack(spacing: Theme.Spacing.sm) {
-                    ColorDot(color: tint)
-                    Text(title).foregroundStyle(.secondary)
-                    if status == .needsAccessibility {
-                        Button("Grant Access…") { Permissions.openAccessibilitySettings() }
-                    }
-                    Button(
-                        isShowingDiagnostics ? "Hide Diagnostics" : "Diagnostics…", action: toggleDiagnostics)
-                }
+            WithObservationTracking {
+                SettingsRow(title: String(localized: "Status"), subtitle: detail, subtitleLineLimit: 3) {
+                                HStack(spacing: Theme.Spacing.sm) {
+                                    ColorDot(color: tint)
+                                    Text(title).foregroundStyle(.secondary)
+                                    if status == .needsAccessibility {
+                                        Button("Grant Access…") { Permissions.openAccessibilitySettings() }
+                                    }
+                                    Button(
+                                        isShowingDiagnostics ? "Hide Diagnostics" : "Diagnostics…", action: toggleDiagnostics)
+                                }
+                            }
             }
         }
 

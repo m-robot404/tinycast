@@ -1,39 +1,42 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct EmojiSettingsView: View {
     @Environment(AppSettings.self) private var settings
 
     var body: some View {
-        @Bindable var settings = settings
-        return Form {
-            FeatureCommandsSection(owner: .emoji, anchor: .emojiCommands)
+        WithObservationTracking {
+            @ObservationPolyfill.Bindable var settings = settings
+                    Form {
+                        FeatureCommandsSection(owner: .emoji, anchor: .emojiCommands)
 
-            Section {
-                EmojiColumnCountPicker(selection: $settings.emojiGridColumns)
-                SettingsRow(title: "Emoji Skin Tone", anchor: .emojiAppearance) {
-                    HStack(spacing: Theme.Spacing.xs) {
-                        ForEach(EmojiSkinTone.allCases) { tone in
-                            let selected = settings.emojiSkinTone == tone
-                            Button {
-                                settings.emojiSkinTone = tone
-                            } label: {
-                                Text(tone.sample)
-                                    .font(.system(size: Theme.Size.emojiSkinToneGlyph))
-                                    .settingsOptionSegment(isSelected: selected)
+                        Section {
+                            EmojiColumnCountPicker(selection: $settings.emojiGridColumns)
+                            SettingsRow(title: "Emoji Skin Tone", anchor: .emojiAppearance) {
+                                HStack(spacing: Theme.Spacing.xs) {
+                                    ForEach(EmojiSkinTone.allCases) { tone in
+                                        let selected = settings.emojiSkinTone == tone
+                                        Button {
+                                            settings.emojiSkinTone = tone
+                                        } label: {
+                                            Text(tone.sample)
+                                                .font(.system(size: Theme.Size.emojiSkinToneGlyph))
+                                                .settingsOptionSegment(isSelected: selected)
+                                        }
+                                        .buttonStyle(.plain)
+                                        .accessibilityLabel(tone.title)
+                                        .accessibilityAddTraits(selected ? [.isSelected] : [])
+                                        .help(tone.title)
+                                    }
+                                }
                             }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel(tone.title)
-                            .accessibilityAddTraits(selected ? [.isSelected] : [])
-                            .help(tone.title)
+                        } header: {
+                            SettingsSectionHeader(.emojiAppearance)
                         }
                     }
-                }
-            } header: {
-                SettingsSectionHeader(.emojiAppearance)
-            }
+                    .formStyle(.grouped)
+                    .settingsScrollTarget(.emoji)
         }
-        .formStyle(.grouped)
-        .settingsScrollTarget(.emoji)
     }
 }
 
@@ -42,16 +45,18 @@ private struct EmojiColumnCountPicker: View {
     @Binding var selection: EmojiGridColumns
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
-            SettingsRowTitle(.emojiAppearance, "Column Count")
+        WithObservationTracking {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
+                        SettingsRowTitle(.emojiAppearance, "Column Count")
 
-            HStack(spacing: Theme.Spacing.xl) {
-                ForEach(EmojiGridColumns.allCases) { columns in
-                    option(columns)
-                }
-            }
+                        HStack(spacing: Theme.Spacing.xl) {
+                            ForEach(EmojiGridColumns.allCases) { columns in
+                                option(columns)
+                            }
+                        }
+                    }
+                    .padding(.vertical, Theme.Spacing.xs)
         }
-        .padding(.vertical, Theme.Spacing.xs)
     }
 
     private func option(_ columns: EmojiGridColumns) -> some View {
@@ -79,20 +84,22 @@ private struct EmojiColumnCountPreview: View {
     let isSelected: Bool
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
-        EmojiGridDots(columns: columns)
-            .fill(isSelected ? Theme.Colors.textTertiary : Theme.Colors.border)
-            .background(
-                shape.fill(isSelected ? Theme.Colors.controlSurface : Color.clear)
-            )
-            .overlay(
-                shape.strokeBorder(
-                    isSelected ? Theme.Colors.border : Theme.Colors.cardStroke,
-                    lineWidth: Theme.Size.hairline)
-            )
-            .clipShape(shape)
-            .aspectRatio(1, contentMode: .fit)
-            .frame(maxWidth: Theme.Size.emojiSettingsGridPreview)
+        WithObservationTracking {
+            let shape = RoundedRectangle(cornerRadius: Theme.Radius.card, style: .continuous)
+                    EmojiGridDots(columns: columns)
+                        .fill(isSelected ? Theme.Colors.textTertiary : Theme.Colors.border)
+                        .background(
+                            shape.fill(isSelected ? Theme.Colors.controlSurface : Color.clear)
+                        )
+                        .overlay(
+                            shape.strokeBorder(
+                                isSelected ? Theme.Colors.border : Theme.Colors.cardStroke,
+                                lineWidth: Theme.Size.hairline)
+                        )
+                        .clipShape(shape)
+                        .aspectRatio(1, contentMode: .fit)
+                        .frame(maxWidth: Theme.Size.emojiSettingsGridPreview)
+        }
     }
 }
 

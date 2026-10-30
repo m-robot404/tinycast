@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 /// Scroll-driven edge mask for a list underlapping the palette's floating bars. See `docs/ui.md`.
 struct EdgeDissolveMask: ViewModifier {
@@ -22,33 +23,39 @@ struct EdgeDissolveMask: ViewModifier {
         var canScroll: Bool
     }
 
+    @ViewBuilder
     func body(content: Content) -> some View {
-        content
-            .onScrollGeometryChange(for: ScrollState.self) { geo in
-                let visible =
-                    geo.containerSize.height - geo.contentInsets.top
-                    - geo.contentInsets.bottom
-                return ScrollState(
-                    top: geo.contentOffset.y + geo.contentInsets.top,
-                    bottom: geo.contentSize.height + geo.contentInsets.bottom
-                        - geo.containerSize.height - geo.contentOffset.y,
-                    canScroll: geo.contentSize.height > visible
-                )
-            } action: { _, new in
-                topDistance = max(0, new.top)
-                bottomDistance = max(0, new.bottom)
-                canScroll = new.canScroll
-            }
-            .mask(
-                // Must span the scroll view's *full* frame — the bars' safe-area insets would otherwise shift the gradient inward, clipping the underlap regions to black.
-                GeometryReader { geo in
-                    LinearGradient(
-                        stops: stops(height: geo.size.height),
-                        startPoint: .top, endPoint: .bottom
+        if #available(macOS 15.0, *) {
+            content
+                .onScrollGeometryChange(for: ScrollState.self) { geo in
+                    let visible =
+                        geo.containerSize.height - geo.contentInsets.top
+                        - geo.contentInsets.bottom
+                    return ScrollState(
+                        top: geo.contentOffset.y + geo.contentInsets.top,
+                        bottom: geo.contentSize.height + geo.contentInsets.bottom
+                            - geo.containerSize.height - geo.contentOffset.y,
+                        canScroll: geo.contentSize.height > visible
                     )
+                } action: { _, new in
+                    topDistance = max(0, new.top)
+                    bottomDistance = max(0, new.bottom)
+                    canScroll = new.canScroll
                 }
-                .ignoresSafeArea()
-            )
+                .mask(
+                    // Must span the scroll view's full frame, including the underlap regions.
+                    GeometryReader { geo in
+                        LinearGradient(
+                            stops: stops(height: geo.size.height),
+                            startPoint: .top, endPoint: .bottom
+                        )
+                    }
+                    .ignoresSafeArea()
+                )
+        } else {
+            // The scroll-driven fade is decorative; keep the scroll view fully functional on Ventura.
+            content
+        }
     }
 
     private func stops(height: CGFloat) -> [Gradient.Stop] {

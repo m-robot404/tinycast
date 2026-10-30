@@ -1,4 +1,5 @@
 import Foundation
+import ObservationPolyfill
 
 /// The parsed catalog: sections precomputed at load, search memoized one query deep.
 @MainActor

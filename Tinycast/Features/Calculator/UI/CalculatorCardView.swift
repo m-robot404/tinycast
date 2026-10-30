@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 extension AppCore {
     /// Reads both observables, so a changed setting or region re-renders every calculator surface.
@@ -40,40 +41,42 @@ struct CalculatorCard: View {
     let selected: Bool
 
     var body: some View {
-        let result = core.calcNumberFormat.localized(result)
-        return Group {
-            switch result.payload {
-            case .value(let display, _):
-                HStack(spacing: 0) {
-                    LeadCardColumn(
-                        text: CalcSyntax.highlighted(result.expression),
-                        badge: result.sourceBadge)
-                    Image(systemName: "arrow.right")
-                        .font(.title3.weight(.semibold))
-                        .foregroundStyle(.tertiary)
-                    LeadCardColumn(
-                        text: CalcSyntax.highlighted(display), badge: result.targetBadge,
-                        weight: .semibold)
-                }
-                .fixedSize(horizontal: false, vertical: true)
-            case .error(let message):
-                HStack(spacing: metrics.spacing.md) {
-                    Image(systemName: "exclamationmark.triangle")
-                        .symbolRenderingMode(.hierarchical)
-                    Text(message)
-                        .lineLimit(1)
-                }
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity)
-            }
+        WithObservationTracking {
+            let result = core.calcNumberFormat.localized(result)
+                    Group {
+                        switch result.payload {
+                        case .value(let display, _):
+                            HStack(spacing: 0) {
+                                LeadCardColumn(
+                                    text: CalcSyntax.highlighted(result.expression),
+                                    badge: result.sourceBadge)
+                                Image(systemName: "arrow.right")
+                                    .font(.title3.weight(.semibold))
+                                    .foregroundStyle(.tertiary)
+                                LeadCardColumn(
+                                    text: CalcSyntax.highlighted(display), badge: result.targetBadge,
+                                    weight: .semibold)
+                            }
+                            .fixedSize(horizontal: false, vertical: true)
+                        case .error(let message):
+                            HStack(spacing: metrics.spacing.md) {
+                                Image(systemName: "exclamationmark.triangle")
+                                    .symbolRenderingMode(.hierarchical)
+                                Text(message)
+                                    .lineLimit(1)
+                            }
+                            .font(.body)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity)
+                        }
+                    }
+                    .padding(.horizontal, metrics.spacing.xl)
+                    .padding(.vertical, metrics.spacing.xxxl)
+                    .overlay(alignment: .bottomTrailing) {
+                        if result.isCurrency { RatesFreshness() }
+                    }
+                    .leadCard(selected: selected)
         }
-        .padding(.horizontal, metrics.spacing.xl)
-        .padding(.vertical, metrics.spacing.xxxl)
-        .overlay(alignment: .bottomTrailing) {
-            if result.isCurrency { RatesFreshness() }
-        }
-        .leadCard(selected: selected)
     }
 }
 
@@ -83,23 +86,25 @@ private struct RatesFreshness: View {
     @State private var hovered = false
 
     var body: some View {
-        if let fetchedAt = currencyRates.rates?.fetchedAt {
-            HStack(spacing: metrics.spacing.xs) {
-                Text("Updated \(fetchedAt, formatter: Self.formatter)")
-                Button(
-                    "Refresh Exchange Rates", systemImage: "arrow.clockwise", action: currencyRates.refresh
-                )
-                .labelStyle(.iconOnly)
-                .buttonStyle(.plain)
-                .symbolEffect(.rotate, options: .repeat(.continuous), isActive: currencyRates.isRefreshing)
-                .foregroundStyle(hovered ? .secondary : .tertiary)
-                .onHover { hovered = $0 }
-                .help("Refresh Exchange Rates")
-            }
-            .font(metrics.typography.compactKeyCap)
-            .foregroundStyle(.tertiary)
-            .padding(.trailing, metrics.spacing.lg)
-            .padding(.bottom, metrics.spacing.md)
+        WithObservationTracking {
+            if let fetchedAt = currencyRates.rates?.fetchedAt {
+                        HStack(spacing: metrics.spacing.xs) {
+                            Text("Updated \(fetchedAt, formatter: Self.formatter)")
+                            Button(
+                                "Refresh Exchange Rates", systemImage: "arrow.clockwise", action: currencyRates.refresh
+                            )
+                            .labelStyle(.iconOnly)
+                            .buttonStyle(.plain)
+                            .symbolEffect(.rotate, options: .repeat(.continuous), isActive: currencyRates.isRefreshing)
+                            .foregroundStyle(hovered ? .secondary : .tertiary)
+                            .onHover { hovered = $0 }
+                            .help("Refresh Exchange Rates")
+                        }
+                        .font(metrics.typography.compactKeyCap)
+                        .foregroundStyle(.tertiary)
+                        .padding(.trailing, metrics.spacing.lg)
+                        .padding(.bottom, metrics.spacing.md)
+                    }
         }
     }
 

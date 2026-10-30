@@ -1,5 +1,6 @@
 // Adapted from Rooms (MIT): https://github.com/saragordic/rooms/blob/main/LICENSE
 import AppKit
+import ObservationPolyfill
 import SwiftUI
 
 /// One window-to-be in the preview. The same window keeps the same id, so its card can glide.

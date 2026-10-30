@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 /// The excluded-apps control: one row per exclusion, then the picker that adds another. The caller
 /// owns the label above it, so a pane can seat the list beside the command the exclusions belong to.
@@ -8,19 +9,21 @@ struct DisabledApplicationsList: View {
     @State private var picking = false
 
     var body: some View {
-        ForEach(bundleIDs, id: \.self) { bundleID in
-            DisabledAppRow(bundleID: bundleID) {
-                bundleIDs.removeAll { $0 == bundleID }
-            }
-        }
+        WithObservationTracking {
+            ForEach(bundleIDs, id: \.self) { bundleID in
+                        DisabledAppRow(bundleID: bundleID) {
+                            bundleIDs.removeAll { $0 == bundleID }
+                        }
+                    }
 
-        Button("Add Application…") { picking = true }
-            .popover(isPresented: $picking, arrowEdge: .bottom) {
-                AppPickerPopover(excluded: Set(bundleIDs)) { bundleID in
-                    bundleIDs.append(bundleID)
-                    picking = false
-                }
-            }
+                    Button("Add Application…") { picking = true }
+                        .popover(isPresented: $picking, arrowEdge: .bottom) {
+                            AppPickerPopover(excluded: Set(bundleIDs)) { bundleID in
+                                bundleIDs.append(bundleID)
+                                picking = false
+                            }
+                        }
+        }
     }
 }
 
@@ -30,14 +33,16 @@ struct DisabledApplicationsSection: View {
     let footer: String
 
     var body: some View {
-        Section {
-            DisabledApplicationsList(bundleIDs: $bundleIDs)
-        } header: {
-            SettingsSectionHeader(anchor)
-        } footer: {
-            Text(footer)
-                .font(.caption)
-                .foregroundStyle(.secondary)
+        WithObservationTracking {
+            Section {
+                        DisabledApplicationsList(bundleIDs: $bundleIDs)
+                    } header: {
+                        SettingsSectionHeader(anchor)
+                    } footer: {
+                        Text(footer)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
         }
     }
 }
@@ -50,22 +55,24 @@ private struct DisabledAppRow: View {
     @Environment(AppIndex.self) private var appIndex
 
     var body: some View {
-        let (name, icon) = AppPresentation.resolve(bundleID: bundleID, in: appIndex)
-        LabeledContent {
-            Button(action: onRemove) {
-                Image(systemName: "xmark.circle.fill")
-                    .foregroundStyle(.tertiary)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Stop excluding \(name)")
-        } label: {
-            Label {
-                Text(name).lineLimit(1)
-            } icon: {
-                Image(nsImage: icon)
-                    .resizable()
-                    .frame(width: SettingsListMetrics.iconSize, height: SettingsListMetrics.iconSize)
-            }
+        WithObservationTracking {
+            let (name, icon) = AppPresentation.resolve(bundleID: bundleID, in: appIndex)
+                    LabeledContent {
+                        Button(action: onRemove) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.tertiary)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Stop excluding \(name)")
+                    } label: {
+                        Label {
+                            Text(name).lineLimit(1)
+                        } icon: {
+                            Image(nsImage: icon)
+                                .resizable()
+                                .frame(width: SettingsListMetrics.iconSize, height: SettingsListMetrics.iconSize)
+                        }
+                    }
         }
     }
 }

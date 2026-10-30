@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct ChatCopyButton: View {
 
@@ -12,22 +13,24 @@ struct ChatCopyButton: View {
     private var copied: Bool { copiedAt != nil }
 
     var body: some View {
-        Button {
-            Paster.copyPlainText(text)
-            copiedAt = Date()
-        } label: {
-            Image(systemName: copied ? "checkmark" : "square.on.square")
-                .font(metrics.typography.keyCap)
-                .foregroundStyle(tint)
-                .frame(width: metrics.size.chatMessageAction, height: metrics.size.chatMessageAction)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(copied ? String(localized: "Copied") : label)
-        .task(id: copiedAt) {
-            guard copied else { return }
-            try? await Task.sleep(for: .seconds(Theme.Duration.copyFeedback))
-            copiedAt = nil
+        WithObservationTracking {
+            Button {
+                        Paster.copyPlainText(text)
+                        copiedAt = Date()
+                    } label: {
+                        Image(systemName: copied ? "checkmark" : "square.on.square")
+                            .font(metrics.typography.keyCap)
+                            .foregroundStyle(tint)
+                            .frame(width: metrics.size.chatMessageAction, height: metrics.size.chatMessageAction)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(copied ? String(localized: "Copied") : label)
+                    .task(id: copiedAt) {
+                        guard copied else { return }
+                        try? await Task.sleep(for: .seconds(Theme.Duration.copyFeedback))
+                        copiedAt = nil
+                    }
         }
     }
 

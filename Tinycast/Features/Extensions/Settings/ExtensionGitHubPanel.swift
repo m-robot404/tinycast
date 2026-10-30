@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 /// Builds one extension from its GitHub source; only the build is kept.
 struct ExtensionGitHubPanel: View {
@@ -15,50 +16,52 @@ struct ExtensionGitHubPanel: View {
     private var isInstalling: Bool { progress != nil }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
-            ExtensionSettingsEditorHeader(
-                title: String(localized: "Install from GitHub"),
-                subtitle: String(
-                    localized: """
-                        Builds an extension from source on this Mac. Only the build is kept — the source \
-                        and its dependencies are deleted once it installs.
-                        """))
+        WithObservationTracking {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
+                        ExtensionSettingsEditorHeader(
+                            title: String(localized: "Install from GitHub"),
+                            subtitle: String(
+                                localized: """
+                                    Builds an extension from source on this Mac. Only the build is kept — the source \
+                                    and its dependencies are deleted once it installs.
+                                    """))
 
-            repositoryField
-            ExtensionToolchainFields()
-                .disabled(isInstalling)
+                        repositoryField
+                        ExtensionToolchainFields()
+                            .disabled(isInstalling)
 
-            Text(
-                """
-                Installing runs your package manager and the extension's own build script. Install \
-                only from someone you trust.
-                """
-            )
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            .fixedSize(horizontal: false, vertical: true)
+                        Text(
+                            """
+                            Installing runs your package manager and the extension's own build script. Install \
+                            only from someone you trust.
+                            """
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
 
-            status
+                        status
 
-            HStack(spacing: Theme.Spacing.md) {
-                Button(installedTitle == nil ? "Cancel" : "Done", action: onClose)
-                    .buttonStyle(ExtensionSettingsEditorButtonStyle(role: .cancel))
-                    .keyboardShortcut(.cancelAction)
-                Button("Install", action: install)
-                    .buttonStyle(ExtensionSettingsEditorButtonStyle(role: .primary))
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(source == nil || isInstalling)
-            }
+                        HStack(spacing: Theme.Spacing.md) {
+                            Button(installedTitle == nil ? "Cancel" : "Done", action: onClose)
+                                .buttonStyle(ExtensionSettingsEditorButtonStyle(role: .cancel))
+                                .keyboardShortcut(.cancelAction)
+                            Button("Install", action: install)
+                                .buttonStyle(ExtensionSettingsEditorButtonStyle(role: .primary))
+                                .keyboardShortcut(.defaultAction)
+                                .disabled(source == nil || isInstalling)
+                        }
+                    }
+                    .padding(Theme.Spacing.dialogInset)
+                    .frame(width: Theme.Size.editorSheetWidth)
+                    .extensionSettingsEditorPanelSurface()
+                    .onChange(of: repository) {
+                        failure = nil
+                        installedTitle = nil
+                    }
+                    // Closing mid-build stops it; the workspace goes with it, so nothing half-built remains.
+                    .onDisappear { installTask?.cancel() }
         }
-        .padding(Theme.Spacing.dialogInset)
-        .frame(width: Theme.Size.editorSheetWidth)
-        .extensionSettingsEditorPanelSurface()
-        .onChange(of: repository) {
-            failure = nil
-            installedTitle = nil
-        }
-        // Closing mid-build stops it; the workspace goes with it, so nothing half-built remains.
-        .onDisappear { installTask?.cancel() }
     }
 
     private var repositoryField: some View {
@@ -132,48 +135,50 @@ private struct ExtensionToolchainFields: View {
     @State private var searchPathsText = ""
 
     var body: some View {
-        @Bindable var settings = core.settings
-        return VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
-            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                HStack {
-                    Text("Package manager").font(.callout.weight(.medium))
-                    Spacer()
-                    Picker("", selection: $settings.extensionPackageManager) {
-                        ForEach(ExtensionPackageManager.allCases) { manager in
-                            Text(manager.title).tag(manager)
+        WithObservationTracking {
+            @ObservationPolyfill.Bindable var settings = core.settings
+                    VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
+                        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                            HStack {
+                                Text("Package manager").font(.callout.weight(.medium))
+                                Spacer()
+                                Picker("", selection: $settings.extensionPackageManager) {
+                                    ForEach(ExtensionPackageManager.allCases) { manager in
+                                        Text(manager.title).tag(manager)
+                                    }
+                                }
+                                .labelsHidden()
+                                .fixedSize()
+                            }
+                            Text(packageManagerDetail)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+
+                        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                            Text("Custom search paths").font(.callout.weight(.medium))
+                            TextField("", text: $searchPathsText, prompt: Text(verbatim: "~/.local/share/mise/shims"))
+                                .extensionSettingsEditorTextField()
+                                .pointerStyle(.horizontalText)
+                                .onChange(of: searchPathsText) { _, value in
+                                    settings.extensionCustomSearchPaths = Self.parseSearchPaths(value)
+                                }
+                            Text(
+                                """
+                                Colon-separated, like PATH — checked before Homebrew and the rest. For mise: \
+                                ~/.local/share/mise/shims. For Nix (Home Manager): \
+                                /etc/profiles/per-user/<you>/home-path/bin.
+                                """
+                            )
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                         }
                     }
-                    .labelsHidden()
-                    .fixedSize()
-                }
-                Text(packageManagerDetail)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-                Text("Custom search paths").font(.callout.weight(.medium))
-                TextField("", text: $searchPathsText, prompt: Text(verbatim: "~/.local/share/mise/shims"))
-                    .extensionSettingsEditorTextField()
-                    .pointerStyle(.horizontalText)
-                    .onChange(of: searchPathsText) { _, value in
-                        settings.extensionCustomSearchPaths = Self.parseSearchPaths(value)
+                    .onAppear {
+                        searchPathsText = core.settings.extensionCustomSearchPaths.joined(separator: ":")
                     }
-                Text(
-                    """
-                    Colon-separated, like PATH — checked before Homebrew and the rest. For mise: \
-                    ~/.local/share/mise/shims. For Nix (Home Manager): \
-                    /etc/profiles/per-user/<you>/home-path/bin.
-                    """
-                )
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .onAppear {
-            searchPathsText = core.settings.extensionCustomSearchPaths.joined(separator: ":")
         }
     }
 

@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct FileSearchSurface: View {
     let url: URL
@@ -15,7 +16,9 @@ struct FileSearchSurface: View {
     private nonisolated static let headLimit = 256 * 1024
 
     var body: some View {
-        surface.task(id: url) { await sniff() }
+        WithObservationTracking {
+            surface.task(id: url) { await sniff() }
+        }
     }
 
     @ViewBuilder private var surface: some View {

@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct MessageHUDView: View {
     enum Accessory {
@@ -17,23 +18,25 @@ struct MessageHUDView: View {
     @Environment(\.metrics) private var metrics
 
     var body: some View {
-        Group {
-            if let onCancel {
-                Button(action: onCancel) {
-                    content
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Cancel \(message)")
-            } else {
-                content
-            }
-        }
-        .onHover { isHovered in
-            if onCancel != nil {
-                withAnimation(.easeOut(duration: Theme.Duration.hover)) {
-                    hovered = isHovered
-                }
-            }
+        WithObservationTracking {
+            Group {
+                        if let onCancel {
+                            Button(action: onCancel) {
+                                content
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Cancel \(message)")
+                        } else {
+                            content
+                        }
+                    }
+                    .onHover { isHovered in
+                        if onCancel != nil {
+                            withAnimation(.easeOut(duration: Theme.Duration.hover)) {
+                                hovered = isHovered
+                            }
+                        }
+                    }
         }
     }
 

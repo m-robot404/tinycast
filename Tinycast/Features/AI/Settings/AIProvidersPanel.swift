@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 import SwiftUI
 
 enum AIProviderRoute: Hashable {
@@ -62,65 +63,67 @@ struct AIProvidersPanel: View {
     private let headerStore = KeychainSecretStore.aiRequestHeaders
 
     var body: some View {
-        VStack(spacing: 0) {
-            SettingsEditorHeader(
-                title: "AI Providers",
-                subtitle: "Installed tools, API connections, and the models each one offers."
-            )
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, Theme.Spacing.dialogInset)
-            .padding(.top, Theme.Spacing.dialogInset)
-            .padding(.bottom, Theme.Spacing.xl)
-            Divider()
-            HStack(spacing: 0) {
-                list
-                    .frame(width: Theme.Size.aiProvidersList)
-                Divider()
-                detail
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
-            // Stated, never intrinsic: selecting a longer provider must not resize the panel.
-            .frame(height: Theme.Size.aiProvidersPanel.height)
-            Divider()
-            HStack {
-                Spacer(minLength: 0)
-                Button("Done", action: onDone)
-                    .buttonStyle(.modalAction(.primary, fillsWidth: false))
-                    .keyboardShortcut(.defaultAction)
-            }
-            .padding(.horizontal, Theme.Spacing.xxl)
-            .padding(.vertical, Theme.Spacing.xl)
-        }
-        .frame(width: Theme.Size.aiProvidersPanel.width)
-        .settingsEditorPanelSurface(controlsOnGlass: false)
-        .releasesFocusOnOutsideClick()
-        .settingsEditorPanel(item: $editor) { target in
-            AIConnectionEditorPanel(
-                target: target,
-                onSave: saveConnection,
-                onCancel: { editor = nil })
-        }
-        .confirmationDialog(
-            pendingRemoval.map { String(localized: "Remove “\($0.title)”?") }
-                ?? String(localized: "Remove connection?"),
-            isPresented: removalPresented,
-            titleVisibility: .visible
-        ) {
-            Button("Remove Connection", role: .destructive) {
-                if let pendingRemoval { removeConnection(pendingRemoval) }
-            }
-            Button("Cancel", role: .cancel) { pendingRemoval = nil }
-        } message: {
-            Text("Its saved API key will also be deleted from Keychain.")
-        }
-        .onAppear {
-            selection = selection ?? initialSelection
-            loadKeyStatuses()
-            core.applyInstalledAILifecycle()
-        }
-        .onChange(of: selection) { modelQuery = "" }
-        .onChange(of: settings.connections.map(\.id)) { _, ids in
-            if case .api(let id) = selection, !ids.contains(id) { selection = .installed(.codex) }
+        WithObservationTracking {
+            VStack(spacing: 0) {
+                        SettingsEditorHeader(
+                            title: "AI Providers",
+                            subtitle: "Installed tools, API connections, and the models each one offers."
+                        )
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, Theme.Spacing.dialogInset)
+                        .padding(.top, Theme.Spacing.dialogInset)
+                        .padding(.bottom, Theme.Spacing.xl)
+                        Divider()
+                        HStack(spacing: 0) {
+                            list
+                                .frame(width: Theme.Size.aiProvidersList)
+                            Divider()
+                            detail
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        }
+                        // Stated, never intrinsic: selecting a longer provider must not resize the panel.
+                        .frame(height: Theme.Size.aiProvidersPanel.height)
+                        Divider()
+                        HStack {
+                            Spacer(minLength: 0)
+                            Button("Done", action: onDone)
+                                .buttonStyle(.modalAction(.primary, fillsWidth: false))
+                                .keyboardShortcut(.defaultAction)
+                        }
+                        .padding(.horizontal, Theme.Spacing.xxl)
+                        .padding(.vertical, Theme.Spacing.xl)
+                    }
+                    .frame(width: Theme.Size.aiProvidersPanel.width)
+                    .settingsEditorPanelSurface(controlsOnGlass: false)
+                    .releasesFocusOnOutsideClick()
+                    .settingsEditorPanel(item: $editor) { target in
+                        AIConnectionEditorPanel(
+                            target: target,
+                            onSave: saveConnection,
+                            onCancel: { editor = nil })
+                    }
+                    .confirmationDialog(
+                        pendingRemoval.map { String(localized: "Remove “\($0.title)”?") }
+                            ?? String(localized: "Remove connection?"),
+                        isPresented: removalPresented,
+                        titleVisibility: .visible
+                    ) {
+                        Button("Remove Connection", role: .destructive) {
+                            if let pendingRemoval { removeConnection(pendingRemoval) }
+                        }
+                        Button("Cancel", role: .cancel) { pendingRemoval = nil }
+                    } message: {
+                        Text("Its saved API key will also be deleted from Keychain.")
+                    }
+                    .onAppear {
+                        selection = selection ?? initialSelection
+                        loadKeyStatuses()
+                        core.applyInstalledAILifecycle()
+                    }
+                    .onChange(of: selection) { modelQuery = "" }
+                    .onChange(of: settings.connections.map(\.id)) { _, ids in
+                        if case .api(let id) = selection, !ids.contains(id) { selection = .installed(.codex) }
+                    }
         }
     }
 
@@ -895,20 +898,22 @@ private struct AIProviderTile: View {
     var size = Theme.Size.settingsSidebarGlyph + Theme.Spacing.xs * 2
 
     var body: some View {
-        let scale = size / (Theme.Size.settingsSidebarGlyph + Theme.Spacing.xs * 2)
-        glyph
-            .frame(
-                width: Theme.Size.settingsSidebarGlyph * scale,
-                height: Theme.Size.settingsSidebarGlyph * scale
-            )
-            .foregroundStyle(.primary)
-            .padding(Theme.Spacing.xs * scale)
-            .background(
-                Theme.Colors.controlSurface,
-                in: RoundedRectangle(
-                    cornerRadius: Theme.Radius.thumbnail * scale, style: .continuous)
-            )
-            .accessibilityHidden(true)
+        WithObservationTracking {
+            let scale = size / (Theme.Size.settingsSidebarGlyph + Theme.Spacing.xs * 2)
+                    glyph
+                        .frame(
+                            width: Theme.Size.settingsSidebarGlyph * scale,
+                            height: Theme.Size.settingsSidebarGlyph * scale
+                        )
+                        .foregroundStyle(.primary)
+                        .padding(Theme.Spacing.xs * scale)
+                        .background(
+                            Theme.Colors.controlSurface,
+                            in: RoundedRectangle(
+                                cornerRadius: Theme.Radius.thumbnail * scale, style: .continuous)
+                        )
+                        .accessibilityHidden(true)
+        }
     }
 
     @ViewBuilder

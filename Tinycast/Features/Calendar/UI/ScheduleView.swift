@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct ScheduleList: View {
     @Environment(\.metrics) private var metrics
@@ -31,34 +32,36 @@ struct ScheduleList: View {
     }
 
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(spacing: 0) {
-                    ForEach(rows) { row in
-                        switch row {
-                        case .header(let title):
-                            SectionHeader(title: title, isFirst: row.id == rows.first?.id)
-                        case .meeting(let meeting):
-                            MeetingRow(
-                                meeting: meeting, now: now, selected: meeting.id == selectedID
-                            )
-                            .contentShape(Rectangle())
-                            .onTapGesture { onActivate(meeting) }
-                            .onRightClick { onActions(meeting) }
-                            .selectionFrame(meeting.id == selectedID)
+        WithObservationTracking {
+            ScrollViewReader { proxy in
+                        ScrollView {
+                            LazyVStack(spacing: 0) {
+                                ForEach(rows) { row in
+                                    switch row {
+                                    case .header(let title):
+                                        SectionHeader(title: title, isFirst: row.id == rows.first?.id)
+                                    case .meeting(let meeting):
+                                        MeetingRow(
+                                            meeting: meeting, now: now, selected: meeting.id == selectedID
+                                        )
+                                        .contentShape(Rectangle())
+                                        .onTapGesture { onActivate(meeting) }
+                                        .onRightClick { onActions(meeting) }
+                                        .selectionFrame(meeting.id == selectedID)
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, metrics.spacing.md)
+                            .padding(.top, metrics.spacing.xs)
+                            .padding(.bottom, metrics.spacing.md)
+                            .hideNativeScrollers()
+                            .scrollOriginAnchor()
                         }
+                        .edgeDissolve()
+                        .thinScrollbar()
+                        .scrollFollowsSelection(
+                            scroll, row: selectedID, atOrigin: firstRowSelected, proxy: proxy)
                     }
-                }
-                .padding(.horizontal, metrics.spacing.md)
-                .padding(.top, metrics.spacing.xs)
-                .padding(.bottom, metrics.spacing.md)
-                .hideNativeScrollers()
-                .scrollOriginAnchor()
-            }
-            .edgeDissolve()
-            .thinScrollbar()
-            .scrollFollowsSelection(
-                scroll, row: selectedID, atOrigin: firstRowSelected, proxy: proxy)
         }
     }
 }
@@ -78,29 +81,31 @@ private struct MeetingRow: View {
     }
 
     var body: some View {
-        HStack(spacing: metrics.spacing.lg) {
-            SymbolImage(
-                name: meeting.link?.provider.sfSymbol ?? "calendar", size: metrics.size.resultRowIcon * 0.7
-            )
-            .frame(width: metrics.size.resultRowIcon, height: metrics.size.resultRowIcon)
-            .foregroundStyle(meeting.isInProgress(now: now) ? Theme.Colors.brand : .secondary)
-            CalendarBar(color: meeting.calendarColor)
-            Text(meeting.title)
-                .font(metrics.typography.rowTitle)
-                .lineLimit(1)
-            Spacer(minLength: metrics.spacing.md)
-            MeetingTiming(meeting: meeting, now: now)
+        WithObservationTracking {
+            HStack(spacing: metrics.spacing.lg) {
+                        SymbolImage(
+                            name: meeting.link?.provider.sfSymbol ?? "calendar", size: metrics.size.resultRowIcon * 0.7
+                        )
+                        .frame(width: metrics.size.resultRowIcon, height: metrics.size.resultRowIcon)
+                        .foregroundStyle(meeting.isInProgress(now: now) ? Theme.Colors.brand : .secondary)
+                        CalendarBar(color: meeting.calendarColor)
+                        Text(meeting.title)
+                            .font(metrics.typography.rowTitle)
+                            .lineLimit(1)
+                        Spacer(minLength: metrics.spacing.md)
+                        MeetingTiming(meeting: meeting, now: now)
+                    }
+                    .padding(.horizontal, metrics.spacing.md)
+                    .padding(.vertical, metrics.spacing.sm)
+                    .background(
+                        RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous)
+                            .fill(fill)
+                    )
+                    .armedHover($hovered)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel(accessibilityText)
+                    .accessibilityAddTraits(.isButton)
         }
-        .padding(.horizontal, metrics.spacing.md)
-        .padding(.vertical, metrics.spacing.sm)
-        .background(
-            RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous)
-                .fill(fill)
-        )
-        .armedHover($hovered)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(accessibilityText)
-        .accessibilityAddTraits(.isButton)
     }
 
     private var accessibilityText: String {

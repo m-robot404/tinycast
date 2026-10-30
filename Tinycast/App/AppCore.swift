@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 
 /// Single owner of every long-lived manager. Wired up once from the app delegate.
 @MainActor

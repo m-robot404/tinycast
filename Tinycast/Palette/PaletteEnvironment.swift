@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 /// A stored environment value would freeze at panel-build time; a body re-reads under Observation.
 private struct InterfaceMetricsScope: ViewModifier {

@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 import Carbon.HIToolbox
 
 /// Owns the Hyper Key's lifecycle and policy. See docs/features/hotkeys.md#the-hyper-key.

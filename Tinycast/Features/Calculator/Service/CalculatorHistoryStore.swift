@@ -1,4 +1,5 @@
 import Foundation
+import ObservationPolyfill
 
 /// One past calculation, recorded when the user copies an answer.
 struct CalcHistoryEntry: Identifiable, Codable, Hashable, Sendable {

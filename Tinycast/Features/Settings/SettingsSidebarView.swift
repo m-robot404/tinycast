@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct SettingsSidebarView: View {
     @Environment(SettingsNavigationState.self) private var navigation
@@ -10,16 +11,18 @@ struct SettingsSidebarView: View {
     private var results: [SettingsSearchEntry] { SettingsSearchCatalog.results(for: query) }
 
     var body: some View {
-        VStack(spacing: 0) {
-            if query.isEmpty {
-                browse
-            } else {
-                found
-            }
+        WithObservationTracking {
+            VStack(spacing: 0) {
+                        if query.isEmpty {
+                            browse
+                        } else {
+                            found
+                        }
+                    }
+                    .searchable(text: $query, isPresented: $searching, placement: .sidebar, prompt: "Search")
+                    .onExitCommand { query = "" }
+                    .background(focusShortcut)
         }
-        .searchable(text: $query, isPresented: $searching, placement: .sidebar, prompt: "Search")
-        .onExitCommand { query = "" }
-        .background(focusShortcut)
     }
 
     private var browse: some View {
@@ -91,20 +94,22 @@ private struct SettingsSearchResultRow: View {
     let entry: SettingsSearchEntry
 
     var body: some View {
-        Label {
-            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-                Text(entry.title).lineLimit(1)
-                Text(entry.breadcrumb)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-            }
-        } icon: {
-            SettingsTabIcon(systemImage: entry.tab.systemImage, tint: .accentColor)
+        WithObservationTracking {
+            Label {
+                        VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                            Text(entry.title).lineLimit(1)
+                            Text(entry.breadcrumb)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                        }
+                    } icon: {
+                        SettingsTabIcon(systemImage: entry.tab.systemImage, tint: .accentColor)
+                    }
+                    // Centred, not first-baseline: the tile sits against a two-line title and breadcrumb.
+                    .labelStyle(CenteredLabelStyle())
         }
-        // Centred, not first-baseline: the tile sits against a two-line title and breadcrumb.
-        .labelStyle(CenteredLabelStyle())
     }
 }
 

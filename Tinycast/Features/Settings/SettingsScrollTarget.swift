@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 extension View {
     /// A pane's `Form`: lets a search result scroll one of its sections into view and pulse it.
@@ -42,7 +43,9 @@ struct SettingsSectionHeader<Label: View>: View {
     @ViewBuilder var label: Label
 
     var body: some View {
-        label.modifier(SearchPill(target: .section(anchor)))
+        WithObservationTracking {
+            label.modifier(SearchPill(target: .section(anchor)))
+        }
     }
 }
 
@@ -69,7 +72,9 @@ struct SettingsRowTitle: View {
     }
 
     var body: some View {
-        Text(title).modifier(SearchPill(target: .row(anchor, title)))
+        WithObservationTracking {
+            Text(title).modifier(SearchPill(target: .row(anchor, title)))
+        }
     }
 }
 

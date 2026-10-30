@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct ChatHistoryList: View {
 
@@ -41,43 +42,45 @@ struct ChatHistoryList: View {
     }
 
     var body: some View {
-        let rows = rows
-        return ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(spacing: 0) {
-                    ForEach(rows) { row in
-                        switch row {
-                        case .header(let title):
-                            SectionHeader(title: title, isFirst: row.id == rows.first?.id)
-                        case .conversation(let conversation):
-                            ChatHistoryRow(
-                                conversation: conversation,
-                                selected: conversation.id == selectedID
-                            )
-                            .selectionFrame(conversation.id == selectedID)
-                            .contentShape(Rectangle())
-                            .onTapGesture { onSelect(conversation) }
-                            .simultaneousGesture(
-                                TapGesture(count: 2).onEnded {
-                                    onSelect(conversation)
-                                    onActivate()
+        WithObservationTracking {
+            let rows = rows
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            LazyVStack(spacing: 0) {
+                                ForEach(rows) { row in
+                                    switch row {
+                                    case .header(let title):
+                                        SectionHeader(title: title, isFirst: row.id == rows.first?.id)
+                                    case .conversation(let conversation):
+                                        ChatHistoryRow(
+                                            conversation: conversation,
+                                            selected: conversation.id == selectedID
+                                        )
+                                        .selectionFrame(conversation.id == selectedID)
+                                        .contentShape(Rectangle())
+                                        .onTapGesture { onSelect(conversation) }
+                                        .simultaneousGesture(
+                                            TapGesture(count: 2).onEnded {
+                                                onSelect(conversation)
+                                                onActivate()
+                                            }
+                                        )
+                                        .onRightClick { onActions(conversation) }
+                                    }
                                 }
-                            )
-                            .onRightClick { onActions(conversation) }
+                            }
+                            .padding(.horizontal, metrics.spacing.md)
+                            .padding(.top, metrics.spacing.xs)
+                            .padding(.bottom, metrics.spacing.md)
+                            .hideNativeScrollers()
+                            .scrollOriginAnchor()
                         }
+                        .edgeDissolve()
+                        .thinScrollbar()
+                        // Snap to the origin on the first row so its section header shows too.
+                        .scrollFollowsSelection(
+                            scroll, row: selectedID?.uuidString, atOrigin: firstRowSelected, proxy: proxy)
                     }
-                }
-                .padding(.horizontal, metrics.spacing.md)
-                .padding(.top, metrics.spacing.xs)
-                .padding(.bottom, metrics.spacing.md)
-                .hideNativeScrollers()
-                .scrollOriginAnchor()
-            }
-            .edgeDissolve()
-            .thinScrollbar()
-            // Snap to the origin on the first row so its section header shows too.
-            .scrollFollowsSelection(
-                scroll, row: selectedID?.uuidString, atOrigin: firstRowSelected, proxy: proxy)
         }
     }
 }
@@ -96,32 +99,34 @@ private struct ChatHistoryRow: View {
     }
 
     var body: some View {
-        IconCache.observeStyle()
-        return HStack(spacing: metrics.spacing.lg) {
-            Image(nsImage: IconCache.symbolIcon(named: "bubble.left")).resizable()
-                .frame(width: metrics.size.resultRowIcon, height: metrics.size.resultRowIcon)
-            VStack(alignment: .leading, spacing: metrics.spacing.xxs) {
-                Text(conversation.displayTitle)
-                    .font(metrics.typography.rowTitle)
-                    .lineLimit(1)
-                if !conversation.preview.isEmpty {
-                    Text(conversation.preview)
-                        .font(metrics.typography.keyCap)
-                        .foregroundStyle(Theme.Colors.textTertiary)
-                        .lineLimit(1)
-                }
-            }
-            Spacer(minLength: 0)
-            Text(conversation.updatedAt.formatted(date: .omitted, time: .shortened))
-                .font(metrics.typography.keyCap)
-                .foregroundStyle(Theme.Colors.textTertiary)
+        WithObservationTracking {
+            let _ = IconCache.observeStyle()
+            HStack(spacing: metrics.spacing.lg) {
+                        Image(nsImage: IconCache.symbolIcon(named: "bubble.left")).resizable()
+                            .frame(width: metrics.size.resultRowIcon, height: metrics.size.resultRowIcon)
+                        VStack(alignment: .leading, spacing: metrics.spacing.xxs) {
+                            Text(conversation.displayTitle)
+                                .font(metrics.typography.rowTitle)
+                                .lineLimit(1)
+                            if !conversation.preview.isEmpty {
+                                Text(conversation.preview)
+                                    .font(metrics.typography.keyCap)
+                                    .foregroundStyle(Theme.Colors.textTertiary)
+                                    .lineLimit(1)
+                            }
+                        }
+                        Spacer(minLength: 0)
+                        Text(conversation.updatedAt.formatted(date: .omitted, time: .shortened))
+                            .font(metrics.typography.keyCap)
+                            .foregroundStyle(Theme.Colors.textTertiary)
+                    }
+                    .padding(.horizontal, metrics.spacing.md)
+                    .padding(.vertical, metrics.spacing.sm)
+                    .background(
+                        RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous).fill(fill)
+                    )
+                    .armedHover($hovered)
         }
-        .padding(.horizontal, metrics.spacing.md)
-        .padding(.vertical, metrics.spacing.sm)
-        .background(
-            RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous).fill(fill)
-        )
-        .armedHover($hovered)
     }
 }
 
@@ -132,27 +137,29 @@ struct ChatHistoryPreview: View {
     @State private var session: ChatSession?
 
     var body: some View {
-        Group {
-            if conversationID == chat.session.id, !chat.session.messages.isEmpty {
-                ChatTranscriptView(
-                    messages: chat.session.messages, status: chat.liveStatus, usage: chat.usage,
-                    surface: .palette)
-            } else if let session {
-                ChatTranscriptView(
-                    messages: session.messages, status: nil, usage: nil,
-                    surface: .palette)
-            } else if conversationID != nil {
-                ProgressView().controlSize(.small)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                Color.clear
-            }
-        }
-        .task(id: conversationID) {
-            session = nil
-            guard let conversationID else { return }
-            guard conversationID != chat.session.id || chat.session.messages.isEmpty else { return }
-            session = history.session(id: conversationID)
+        WithObservationTracking {
+            Group {
+                        if conversationID == chat.session.id, !chat.session.messages.isEmpty {
+                            ChatTranscriptView(
+                                messages: chat.session.messages, status: chat.liveStatus, usage: chat.usage,
+                                surface: .palette)
+                        } else if let session {
+                            ChatTranscriptView(
+                                messages: session.messages, status: nil, usage: nil,
+                                surface: .palette)
+                        } else if conversationID != nil {
+                            ProgressView().controlSize(.small)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        } else {
+                            Color.clear
+                        }
+                    }
+                    .task(id: conversationID) {
+                        session = nil
+                        guard let conversationID else { return }
+                        guard conversationID != chat.session.id || chat.session.messages.isEmpty else { return }
+                        session = history.session(id: conversationID)
+                    }
         }
     }
 }

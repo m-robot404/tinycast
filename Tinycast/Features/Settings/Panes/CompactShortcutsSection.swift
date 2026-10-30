@@ -1,30 +1,33 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct CompactShortcutsSection: View {
     @Environment(AppSettings.self) private var settings
     @Environment(AppIndex.self) private var appIndex
 
     var body: some View {
-        Section {
-            ForEach(settings.compactBarCommands, id: \.self) { command in
-                shortcut(command)
-            }
-            Menu {
-                options(availableCommands) { command in
-                    guard settings.compactBarCommands.count < CommandID.compactBarLimit,
-                        !settings.compactBarCommands.contains(command)
-                    else { return }
-                    settings.compactBarCommands.append(command)
-                }
-            } label: {
-                Label("Add Shortcut", systemImage: "plus")
-            }
-            .menuStyle(.borderlessButton)
-            .menuIndicator(.hidden)
-            .fixedSize()
-            .disabled(settings.compactBarCommands.count >= CommandID.compactBarLimit)
-        } header: {
-            SettingsSectionHeader(.generalCompactShortcuts)
+        WithObservationTracking {
+            Section {
+                        ForEach(settings.compactBarCommands, id: \.self) { command in
+                            shortcut(command)
+                        }
+                        Menu {
+                            options(availableCommands) { command in
+                                guard settings.compactBarCommands.count < CommandID.compactBarLimit,
+                                    !settings.compactBarCommands.contains(command)
+                                else { return }
+                                settings.compactBarCommands.append(command)
+                            }
+                        } label: {
+                            Label("Add Shortcut", systemImage: "plus")
+                        }
+                        .menuStyle(.borderlessButton)
+                        .menuIndicator(.hidden)
+                        .fixedSize()
+                        .disabled(settings.compactBarCommands.count >= CommandID.compactBarLimit)
+                    } header: {
+                        SettingsSectionHeader(.generalCompactShortcuts)
+                    }
         }
     }
 

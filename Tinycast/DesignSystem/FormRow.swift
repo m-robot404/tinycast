@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct FormRow<Content: View>: View {
     let title: String
@@ -20,15 +21,17 @@ struct FormRow<Content: View>: View {
     }
 
     var body: some View {
-        let labelWidth = (metrics.size.panelWidth * 0.16).rounded()
-        HStack(alignment: alignment, spacing: metrics.spacing.xxl) {
-            Text(title)
-                .font(metrics.typography.sectionHeader)
-                .foregroundStyle(Theme.Colors.textSecondary)
-                .frame(width: labelWidth, alignment: .trailing)
-                .padding(.top, labelInset ?? (alignment == .top ? metrics.spacing.lg : 0))
-            content.frame(maxWidth: .infinity, alignment: .leading)
-            Color.clear.frame(width: labelWidth, height: 0)
+        WithObservationTracking {
+            let labelWidth = (metrics.size.panelWidth * 0.16).rounded()
+                    HStack(alignment: alignment, spacing: metrics.spacing.xxl) {
+                        Text(title)
+                            .font(metrics.typography.sectionHeader)
+                            .foregroundStyle(Theme.Colors.textSecondary)
+                            .frame(width: labelWidth, alignment: .trailing)
+                            .padding(.top, labelInset ?? (alignment == .top ? metrics.spacing.lg : 0))
+                        content.frame(maxWidth: .infinity, alignment: .leading)
+                        Color.clear.frame(width: labelWidth, height: 0)
+                    }
         }
     }
 }

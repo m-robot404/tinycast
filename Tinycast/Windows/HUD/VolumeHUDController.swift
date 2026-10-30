@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 import SwiftUI
 
 /// The volume readout; a box, not the pill, because a level needs a bar and a number.

@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 /// Fill and hover for every lead card, so none can answer a selection differently from another.
 private struct LeadCardChrome: ViewModifier {
@@ -38,15 +39,17 @@ struct LeadCardColumn: View {
     var weight: Font.Weight = .medium
 
     var body: some View {
-        VStack(spacing: metrics.spacing.md) {
-            Text(text)
-                .font(metrics.typography.calcResult.weight(weight))
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-            if let badge { LeadCardBadge(text: badge) }
+        WithObservationTracking {
+            VStack(spacing: metrics.spacing.md) {
+                        Text(text)
+                            .font(metrics.typography.calcResult.weight(weight))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
+                        if let badge { LeadCardBadge(text: badge) }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal, metrics.spacing.md)
         }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, metrics.spacing.md)
     }
 }
 
@@ -55,16 +58,18 @@ private struct LeadCardBadge: View {
     let text: String
 
     var body: some View {
-        Text(text)
-            .font(metrics.typography.keyCap)
-            .lineLimit(1)
-            .minimumScaleFactor(0.6)
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, metrics.spacing.sm)
-            .padding(.vertical, metrics.spacing.xxs)
-            .background(
-                RoundedRectangle(cornerRadius: metrics.radius.keyCap, style: .continuous)
-                    .fill(Theme.Colors.controlSurface)
-            )
+        WithObservationTracking {
+            Text(text)
+                        .font(metrics.typography.keyCap)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, metrics.spacing.sm)
+                        .padding(.vertical, metrics.spacing.xxs)
+                        .background(
+                            RoundedRectangle(cornerRadius: metrics.radius.keyCap, style: .continuous)
+                                .fill(Theme.Colors.controlSurface)
+                        )
+        }
     }
 }

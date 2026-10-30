@@ -1,4 +1,5 @@
 import Foundation
+import ObservationPolyfill
 import Observation
 
 /// Mirrors the stores bound to it into settings.json, and applies the file's edits back to them.

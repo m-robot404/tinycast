@@ -1,4 +1,5 @@
 import CoreGraphics
+import ObservationPolyfill
 import Foundation
 
 /// The room library. Authored data, so a bad record is cleaned rather than discarded.

@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct CustomCommandPreview: View {
     @Environment(\.metrics) private var metrics
@@ -51,42 +52,44 @@ struct CustomCommandPreview: View {
     }
 
     var body: some View {
-        if let command {
-            VStack(alignment: .leading, spacing: 0) {
-                ScrollView {
-                    Text(command.command)
-                        .font(metrics.typography.rowTitle.monospaced())
-                        .textSelection(.enabled)
-                        .frame(maxWidth: .infinity, alignment: .topLeading)
-                        .padding(metrics.spacing.xl)
-                }
-                .id(command.id)
-                .edgeDissolve()
-                .thinScrollbar()
-                VStack(alignment: .leading, spacing: metrics.spacing.sm) {
-                    Text("Information")
-                        .font(metrics.typography.sectionHeader)
-                        .foregroundStyle(Theme.Colors.textSecondary)
-                    VStack(spacing: 0) {
-                        let rows = information(for: command)
-                        ForEach(rows) { row in
-                            if row.id != rows.first?.id { Divider() }
-                            HStack(spacing: metrics.spacing.sm) {
-                                Text(row.label).foregroundStyle(Theme.Colors.textSecondary)
-                                Spacer(minLength: metrics.spacing.lg)
-                                row.value.lineLimit(1).truncationMode(.middle)
+        WithObservationTracking {
+            if let command {
+                        VStack(alignment: .leading, spacing: 0) {
+                            ScrollView {
+                                Text(command.command)
+                                    .font(metrics.typography.rowTitle.monospaced())
+                                    .textSelection(.enabled)
+                                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                                    .padding(metrics.spacing.xl)
                             }
-                            .font(metrics.typography.keyCap)
-                            .padding(.vertical, metrics.spacing.xs)
+                            .id(command.id)
+                            .edgeDissolve()
+                            .thinScrollbar()
+                            VStack(alignment: .leading, spacing: metrics.spacing.sm) {
+                                Text("Information")
+                                    .font(metrics.typography.sectionHeader)
+                                    .foregroundStyle(Theme.Colors.textSecondary)
+                                VStack(spacing: 0) {
+                                    let rows = information(for: command)
+                                    ForEach(rows) { row in
+                                        if row.id != rows.first?.id { Divider() }
+                                        HStack(spacing: metrics.spacing.sm) {
+                                            Text(row.label).foregroundStyle(Theme.Colors.textSecondary)
+                                            Spacer(minLength: metrics.spacing.lg)
+                                            row.value.lineLimit(1).truncationMode(.middle)
+                                        }
+                                        .font(metrics.typography.keyCap)
+                                        .padding(.vertical, metrics.spacing.xs)
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, metrics.spacing.xl)
+                            .padding(.vertical, metrics.spacing.md)
                         }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else {
+                        Color.clear
                     }
-                }
-                .padding(.horizontal, metrics.spacing.xl)
-                .padding(.vertical, metrics.spacing.md)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else {
-            Color.clear
         }
     }
 }

@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 /// Quick AI: one palette screen whose search field is the composer.
 struct AIScreen: PaletteScreen {
@@ -167,24 +168,26 @@ private struct AIChatView: View {
     let onChoose: (String) -> Void
 
     var body: some View {
-        Group {
-            if chat.session.messages.isEmpty {
-                // Read in the body, so a CLI signing in or a provider switched on is seen at once.
-                let unavailability = availability()
-                AIEmptyState(
-                    message: chat.notice ?? unavailability,
-                    canConfigure: chat.notice != nil || unavailability != nil,
-                    onConfigure: onConfigure)
-            } else {
-                ChatTranscriptView(
-                    messages: chat.session.messages,
-                    status: chat.liveStatus,
-                    usage: chat.usage,
-                    surface: .palette,
-                    onChoose: chat.isStreaming || !settings.choicesEnabled ? nil : onChoose)
-            }
+        WithObservationTracking {
+            Group {
+                        if chat.session.messages.isEmpty {
+                            // Read in the body, so a CLI signing in or a provider switched on is seen at once.
+                            let unavailability = availability()
+                            AIEmptyState(
+                                message: chat.notice ?? unavailability,
+                                canConfigure: chat.notice != nil || unavailability != nil,
+                                onConfigure: onConfigure)
+                        } else {
+                            ChatTranscriptView(
+                                messages: chat.session.messages,
+                                status: chat.liveStatus,
+                                usage: chat.usage,
+                                surface: .palette,
+                                onChoose: chat.isStreaming || !settings.choicesEnabled ? nil : onChoose)
+                        }
+                    }
+                    .onAppear(perform: onAppear)
         }
-        .onAppear(perform: onAppear)
     }
 }
 
@@ -208,28 +211,30 @@ private struct AttachmentsPill: View {
     }
 
     var body: some View {
-        Button(action: onOpen) {
-            HStack(spacing: metrics.spacing.xs) {
-                if let newest = attachments.last { AttachmentGlyph(attachment: newest) }
-                if let others = Self.others(attachments) {
-                    Text(others)
-                        .font(metrics.typography.chip)
-                        .foregroundStyle(Theme.Colors.textSecondary)
-                        .padding(.trailing, metrics.spacing.xs)
-                }
-            }
-            .padding(metrics.size.chatAttachmentInset)
-            .background(
-                RoundedRectangle(cornerRadius: metrics.radius.attachmentChip, style: .continuous)
-                    .fill(Theme.Colors.controlSurface)
-            )
-            .contentShape(Rectangle())
+        WithObservationTracking {
+            Button(action: onOpen) {
+                        HStack(spacing: metrics.spacing.xs) {
+                            if let newest = attachments.last { AttachmentGlyph(attachment: newest) }
+                            if let others = Self.others(attachments) {
+                                Text(others)
+                                    .font(metrics.typography.chip)
+                                    .foregroundStyle(Theme.Colors.textSecondary)
+                                    .padding(.trailing, metrics.spacing.xs)
+                            }
+                        }
+                        .padding(metrics.size.chatAttachmentInset)
+                        .background(
+                            RoundedRectangle(cornerRadius: metrics.radius.attachmentChip, style: .continuous)
+                                .fill(Theme.Colors.controlSurface)
+                        )
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .tooltip(attachments.map(\.name).joined(separator: "\n"), edge: .bottom)
+                    .accessibilityLabel(
+                        attachments.count == 1
+                            ? "Attached \(attachments[0].name)" : "\(attachments.count) files attached")
         }
-        .buttonStyle(.plain)
-        .tooltip(attachments.map(\.name).joined(separator: "\n"), edge: .bottom)
-        .accessibilityLabel(
-            attachments.count == 1
-                ? "Attached \(attachments[0].name)" : "\(attachments.count) files attached")
     }
 }
 
@@ -239,11 +244,13 @@ private struct AttachmentGlyph: View {
     let attachment: ChatAttachment
 
     var body: some View {
-        Image(systemName: attachment.glyph)
-            .font(metrics.typography.chip)
-            .symbolRenderingMode(.hierarchical)
-            .foregroundStyle(Theme.Colors.textSecondary)
-            .frame(width: metrics.size.chatAttachmentThumb, height: metrics.size.chatAttachmentThumb)
+        WithObservationTracking {
+            Image(systemName: attachment.glyph)
+                        .font(metrics.typography.chip)
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(Theme.Colors.textSecondary)
+                        .frame(width: metrics.size.chatAttachmentThumb, height: metrics.size.chatAttachmentThumb)
+        }
     }
 }
 
@@ -269,14 +276,16 @@ struct AIModelButton: View {
     let action: () -> Void
 
     var body: some View {
-        HeaderMenuButton(
-            title: title,
-            icon: icon,
-            isOpen: isOpen,
-            help: String(localized: "Switch AI model  ⌘P"),
-            action: action
-        )
-        .fixedSize(horizontal: true, vertical: false)
+        WithObservationTracking {
+            HeaderMenuButton(
+                        title: title,
+                        icon: icon,
+                        isOpen: isOpen,
+                        help: String(localized: "Switch AI model  ⌘P"),
+                        action: action
+                    )
+                    .fixedSize(horizontal: true, vertical: false)
+        }
     }
 }
 
@@ -286,14 +295,16 @@ struct AIReasoningButton: View {
     let action: () -> Void
 
     var body: some View {
-        HeaderMenuButton(
-            title: title,
-            systemImage: "brain",
-            symbolSize: Theme.Size.barBrandIcon,
-            isOpen: isOpen,
-            help: String(localized: "Change reasoning effort"),
-            action: action
-        )
-        .fixedSize(horizontal: true, vertical: false)
+        WithObservationTracking {
+            HeaderMenuButton(
+                        title: title,
+                        systemImage: "brain",
+                        symbolSize: Theme.Size.barBrandIcon,
+                        isOpen: isOpen,
+                        help: String(localized: "Change reasoning effort"),
+                        action: action
+                    )
+                    .fixedSize(horizontal: true, vertical: false)
+        }
     }
 }

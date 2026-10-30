@@ -1,4 +1,5 @@
 import Foundation
+import ObservationPolyfill
 
 /// Values are passed positionally, so what the user types is never re-parsed by zsh.
 struct CustomCommandArgument: Codable, Hashable, Sendable {

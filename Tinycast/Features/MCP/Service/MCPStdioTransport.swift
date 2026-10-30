@@ -1,4 +1,5 @@
 import Foundation
+import ObservationPolyfill
 
 /// A local server over its own stdin/stdout, one newline-delimited JSON-RPC message per line.
 @MainActor

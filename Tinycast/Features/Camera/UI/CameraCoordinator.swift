@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 import SwiftUI
 
 /// Owns the standalone camera surface: one panel at a time, and the camera stops with it.

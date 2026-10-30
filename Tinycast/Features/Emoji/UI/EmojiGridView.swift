@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 /// One titled run of grid cells; `start` is the flat selection index of its first cell.
 struct EmojiGridSection: Identifiable {
@@ -151,40 +152,42 @@ struct EmojiGridView: View {
     private var firstRowID: String? { sections.first.map { $0.id + "-row-0" } }
 
     var body: some View {
-        let items = items
-        return ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(spacing: 0) {
-                    ForEach(items) { item in
-                        switch item {
-                        case .header(_, let title, let count):
-                            EmojiSectionHeader(
-                                title: title, count: count, isFirst: item.id == items.first?.id)
-                        case .row(let row):
-                            EmojiGridRowView(
-                                row: row, selection: selection, tone: tone, columns: columns,
-                                onSelect: onSelect, onActivate: onActivate, onActions: onActions
-                            )
-                            .padding(
-                                .bottom,
-                                row.isLastInSection ? 0 : metrics.spacing.md
-                            )
-                            .selectionFrame(item.id == selectedRowID)
+        WithObservationTracking {
+            let items = items
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            LazyVStack(spacing: 0) {
+                                ForEach(items) { item in
+                                    switch item {
+                                    case .header(_, let title, let count):
+                                        EmojiSectionHeader(
+                                            title: title, count: count, isFirst: item.id == items.first?.id)
+                                    case .row(let row):
+                                        EmojiGridRowView(
+                                            row: row, selection: selection, tone: tone, columns: columns,
+                                            onSelect: onSelect, onActivate: onActivate, onActions: onActions
+                                        )
+                                        .padding(
+                                            .bottom,
+                                            row.isLastInSection ? 0 : metrics.spacing.md
+                                        )
+                                        .selectionFrame(item.id == selectedRowID)
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, metrics.size.emojiGridInset)
+                            .padding(.top, metrics.spacing.xs)
+                            .padding(.bottom, metrics.spacing.md)
+                            .hideNativeScrollers()
+                            .scrollOriginAnchor()
                         }
+                        .edgeDissolve()
+                        .thinScrollbar()
+                        // Snap to the origin on the first grid row so its header shows too.
+                        .scrollFollowsSelection(
+                            scroll, row: selectedRowID, atOrigin: selectedRowID == firstRowID, proxy: proxy
+                        )
                     }
-                }
-                .padding(.horizontal, metrics.size.emojiGridInset)
-                .padding(.top, metrics.spacing.xs)
-                .padding(.bottom, metrics.spacing.md)
-                .hideNativeScrollers()
-                .scrollOriginAnchor()
-            }
-            .edgeDissolve()
-            .thinScrollbar()
-            // Snap to the origin on the first grid row so its header shows too.
-            .scrollFollowsSelection(
-                scroll, row: selectedRowID, atOrigin: selectedRowID == firstRowID, proxy: proxy
-            )
         }
     }
 }
@@ -197,17 +200,19 @@ private struct EmojiSectionHeader: View {
     let isFirst: Bool
 
     var body: some View {
-        HStack(spacing: metrics.spacing.sm) {
-            Text(title)
-                .foregroundStyle(Theme.Colors.textSecondary)
-            Text(count, format: .number)
-                .foregroundStyle(Theme.Colors.textTertiary)
-                .monospacedDigit()
-            Spacer(minLength: 0)
+        WithObservationTracking {
+            HStack(spacing: metrics.spacing.sm) {
+                        Text(title)
+                            .foregroundStyle(Theme.Colors.textSecondary)
+                        Text(count, format: .number)
+                            .foregroundStyle(Theme.Colors.textTertiary)
+                            .monospacedDigit()
+                        Spacer(minLength: 0)
+                    }
+                    .font(metrics.typography.sectionHeader)
+                    .padding(.top, isFirst ? metrics.spacing.xs : metrics.spacing.emojiSectionSpacing)
+                    .padding(.bottom, metrics.spacing.md)
         }
-        .font(metrics.typography.sectionHeader)
-        .padding(.top, isFirst ? metrics.spacing.xs : metrics.spacing.emojiSectionSpacing)
-        .padding(.bottom, metrics.spacing.md)
     }
 }
 
@@ -235,48 +240,50 @@ private struct EmojiGridRowView: View {
     }
 
     var body: some View {
-        HStack(spacing: spacing) {
-            ForEach(0..<columns.rawValue, id: \.self) { column in
-                if column < row.entries.count {
-                    EmojiCell(
-                        glyph: row[column].display(tone: tone),
-                        selected: row.start + column == selection,
-                        hovered: column == hoveredColumn,
-                        size: cellSize
+        WithObservationTracking {
+            HStack(spacing: spacing) {
+                        ForEach(0..<columns.rawValue, id: \.self) { column in
+                            if column < row.entries.count {
+                                EmojiCell(
+                                    glyph: row[column].display(tone: tone),
+                                    selected: row.start + column == selection,
+                                    hovered: column == hoveredColumn,
+                                    size: cellSize
+                                )
+                            } else {
+                                // Empty trailing slots keep a partial last row aligned with the full rows.
+                                Color.clear.frame(width: cellSize, height: cellSize)
+                            }
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+                    // Single tap selects; the double-tap paste rides along as a simultaneous gesture.
+                    .gesture(
+                        SpatialTapGesture().onEnded { value in
+                            if let column = column(at: value.location) { onSelect(row.start + column) }
+                        }
                     )
-                } else {
-                    // Empty trailing slots keep a partial last row aligned with the full rows.
-                    Color.clear.frame(width: cellSize, height: cellSize)
-                }
-            }
+                    .simultaneousGesture(
+                        SpatialTapGesture(count: 2).onEnded { value in
+                            guard let column = column(at: value.location) else { return }
+                            onSelect(row.start + column)
+                            onActivate()
+                        }
+                    )
+                    .onRightClick { point in
+                        if let column = column(at: point) { onActions(row.start + column) }
+                    }
+                    .onContinuousHover(coordinateSpace: .local) { phase in
+                        switch phase {
+                        case .active(let point):
+                            hoveredColumn = palette.hoverHighlightArmed ? column(at: point) : nil
+                        case .ended:
+                            hoveredColumn = nil
+                        }
+                    }
+                    .onChange(of: palette.hoverDisarmToken) { _ in hoveredColumn = nil }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .contentShape(Rectangle())
-        // Single tap selects; the double-tap paste rides along as a simultaneous gesture.
-        .gesture(
-            SpatialTapGesture().onEnded { value in
-                if let column = column(at: value.location) { onSelect(row.start + column) }
-            }
-        )
-        .simultaneousGesture(
-            SpatialTapGesture(count: 2).onEnded { value in
-                guard let column = column(at: value.location) else { return }
-                onSelect(row.start + column)
-                onActivate()
-            }
-        )
-        .onRightClick { point in
-            if let column = column(at: point) { onActions(row.start + column) }
-        }
-        .onContinuousHover(coordinateSpace: .local) { phase in
-            switch phase {
-            case .active(let point):
-                hoveredColumn = palette.hoverHighlightArmed ? column(at: point) : nil
-            case .ended:
-                hoveredColumn = nil
-            }
-        }
-        .onChange(of: palette.hoverDisarmToken) { hoveredColumn = nil }
     }
 
     /// Point → column, rejecting the gap between cells and empty slots in a partial row.
@@ -307,36 +314,38 @@ private struct EmojiCell: View {
     private var glyphSize: CGFloat { min(max(size * 0.48, 30), 52) }
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: metrics.radius.emojiCell, style: .continuous)
-        return ZStack {
-            shape.fill(fill)
-            if selected {
-                // A blurred duplicate keeps every colour in the glyph instead of inventing a tint.
-                selectedHalo
-                    .opacity(0.25)
-                    .clipShape(shape)
-            }
-            Text(glyph)
-                .font(.system(size: glyphSize))
-            if selected {
-                shape.strokeBorder(Theme.Colors.emojiSelectionBorder, lineWidth: 2)
-                selectedHalo
-                    .opacity(0.30)
-                    .mask(shape.strokeBorder(lineWidth: 2))
-                shape.inset(by: 2)
-                    .strokeBorder(Theme.Colors.emojiInnerBorder, lineWidth: 1)
-            } else if hovered {
-                ZStack {
-                    shape.strokeBorder(
-                        Theme.Colors.emojiHoverBorder, lineWidth: 2)
-                    shape.inset(by: 2)
-                        .strokeBorder(Theme.Colors.emojiInnerBorder, lineWidth: 1)
-                }
-                .transition(.opacity)
-            }
+        WithObservationTracking {
+            let shape = RoundedRectangle(cornerRadius: metrics.radius.emojiCell, style: .continuous)
+                    ZStack {
+                        shape.fill(fill)
+                        if selected {
+                            // A blurred duplicate keeps every colour in the glyph instead of inventing a tint.
+                            selectedHalo
+                                .opacity(0.25)
+                                .clipShape(shape)
+                        }
+                        Text(glyph)
+                            .font(.system(size: glyphSize))
+                        if selected {
+                            shape.strokeBorder(Theme.Colors.emojiSelectionBorder, lineWidth: 2)
+                            selectedHalo
+                                .opacity(0.30)
+                                .mask(shape.strokeBorder(lineWidth: 2))
+                            shape.inset(by: 2)
+                                .strokeBorder(Theme.Colors.emojiInnerBorder, lineWidth: 1)
+                        } else if hovered {
+                            ZStack {
+                                shape.strokeBorder(
+                                    Theme.Colors.emojiHoverBorder, lineWidth: 2)
+                                shape.inset(by: 2)
+                                    .strokeBorder(Theme.Colors.emojiInnerBorder, lineWidth: 1)
+                            }
+                            .transition(.opacity)
+                        }
+                    }
+                    .frame(width: size, height: size)
+                    .animation(.easeOut(duration: Theme.Duration.hover), value: hovered)
         }
-        .frame(width: size, height: size)
-        .animation(.easeOut(duration: Theme.Duration.hover), value: hovered)
     }
 
     /// Oversized before blur so its multi-colour wash reaches every corner of the selected tile.

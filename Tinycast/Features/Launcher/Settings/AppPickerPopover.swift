@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 import SwiftUI
 
 struct AppPickerPopover: View {
@@ -16,23 +17,25 @@ struct AppPickerPopover: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            TextField("Search apps…", text: $query)
-                .textFieldStyle(.roundedBorder)
-                .padding(Theme.Spacing.md)
-            Divider()
-            ScrollView {
-                LazyVStack(spacing: 1) {
-                    ForEach(candidates) { app in
-                        row(title: app.name, icon: app.icon) {
-                            if let id = app.bundleID { onSelect(id) }
+        WithObservationTracking {
+            VStack(spacing: 0) {
+                        TextField("Search apps…", text: $query)
+                            .textFieldStyle(.roundedBorder)
+                            .padding(Theme.Spacing.md)
+                        Divider()
+                        ScrollView {
+                            LazyVStack(spacing: 1) {
+                                ForEach(candidates) { app in
+                                    row(title: app.name, icon: app.icon) {
+                                        if let id = app.bundleID { onSelect(id) }
+                                    }
+                                }
+                            }
+                            .padding(Theme.Spacing.sm)
                         }
                     }
-                }
-                .padding(Theme.Spacing.sm)
-            }
+                    .frame(width: 220, height: 240)
         }
-        .frame(width: 220, height: 240)
     }
 
     private func row(title: String, icon: NSImage, action: @escaping () -> Void) -> some View {

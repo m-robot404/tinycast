@@ -1,4 +1,5 @@
 import Foundation
+import ObservationPolyfill
 
 /// Follows Language & Region's number format, so a change there applies without a relaunch.
 @MainActor

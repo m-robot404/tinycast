@@ -1,7 +1,8 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct QuicklinkEditorView: View {
-    @Bindable var editor: QuicklinkEditorSession
+    @ObservationPolyfill.Bindable var editor: QuicklinkEditorSession
     let openMenuCorner: MenuPanelCorner?
     let openInputMenu: (PopoverMenuContent, MenuPanelCorner, Int) -> Void
 
@@ -17,55 +18,57 @@ struct QuicklinkEditorView: View {
     @State private var applicationMenuFrame: CGRect = .zero
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: metrics.spacing.xxl) {
-                FormRow("Link", alignment: .top) { linkEditor }
-                FormRow("Name & Icon") { nameField }
-                FormRow("Open With") { applicationMenu }
-                FormRow {
-                    VStack(alignment: .leading, spacing: metrics.spacing.lg) {
-                        option(
-                            String(localized: "Show in root search"),
-                            detail: String(localized: "List this quicklink alongside apps and commands."),
-                            value: $editor.showsInRootSearch, focus: .rootSearch)
-                        option(
-                            String(localized: "Pin to top"),
-                            detail: String(localized: "Keep it above the other quicklinks."),
-                            value: $editor.isPinned, focus: .pin)
-                        if let errorMessage = editor.errorMessage {
-                            Text(errorMessage)
-                                .font(metrics.typography.rowTrailing)
-                                .foregroundStyle(.orange)
-                                .fixedSize(horizontal: false, vertical: true)
+        WithObservationTracking {
+            ScrollView {
+                        VStack(spacing: metrics.spacing.xxl) {
+                            FormRow("Link", alignment: .top) { linkEditor }
+                            FormRow("Name & Icon") { nameField }
+                            FormRow("Open With") { applicationMenu }
+                            FormRow {
+                                VStack(alignment: .leading, spacing: metrics.spacing.lg) {
+                                    option(
+                                        String(localized: "Show in root search"),
+                                        detail: String(localized: "List this quicklink alongside apps and commands."),
+                                        value: $editor.showsInRootSearch, focus: .rootSearch)
+                                    option(
+                                        String(localized: "Pin to top"),
+                                        detail: String(localized: "Keep it above the other quicklinks."),
+                                        value: $editor.isPinned, focus: .pin)
+                                    if let errorMessage = editor.errorMessage {
+                                        Text(errorMessage)
+                                            .font(metrics.typography.rowTrailing)
+                                            .foregroundStyle(.orange)
+                                            .fixedSize(horizontal: false, vertical: true)
+                                    }
+                                }
+                            }
                         }
+                        .font(metrics.typography.rowTitle)
+                        .foregroundStyle(Theme.Colors.textPrimary)
+                        .padding(.horizontal, metrics.spacing.xxxl * 2)
+                        .padding(.vertical, metrics.spacing.md)
                     }
-                }
-            }
-            .font(metrics.typography.rowTitle)
-            .foregroundStyle(Theme.Colors.textPrimary)
-            .padding(.horizontal, metrics.spacing.xxxl * 2)
-            .padding(.vertical, metrics.spacing.md)
-        }
-        .scrollClipDisabled()
-        .edgeDissolve()
-        .focusEffectDisabled()
-        .task(id: palette.focusToken) {
-            palette.noteEditingField(true)
-            await Task.yield()
-            guard !Task.isCancelled else { return }
-            focusedField = editor.focusedField
-        }
-        .onChange(of: editor.focusedField) { _, field in focusedField = field }
-        .onChange(of: focusedField) { _, field in
-            if let field { editor.focusedField = field }
-            focusedControl = field == .link || field == .name ? nil : field
-        }
-        .onChange(of: focusedControl) { _, field in
-            if let field { focusedField = field }
-        }
-        .onDisappear {
-            coordinator.editorDidClose(editor)
-            palette.noteEditingField(false)
+                    .scrollClipDisabled()
+                    .edgeDissolve()
+                    .focusEffectDisabled()
+                    .task(id: palette.focusToken) {
+                        palette.noteEditingField(true)
+                        await Task.yield()
+                        guard !Task.isCancelled else { return }
+                        focusedField = editor.focusedField
+                    }
+                    .onChange(of: editor.focusedField) { _, field in focusedField = field }
+                    .onChange(of: focusedField) { _, field in
+                        if let field { editor.focusedField = field }
+                        focusedControl = field == .link || field == .name ? nil : field
+                    }
+                    .onChange(of: focusedControl) { _, field in
+                        if let field { focusedField = field }
+                    }
+                    .onDisappear {
+                        coordinator.editorDidClose(editor)
+                        palette.noteEditingField(false)
+                    }
         }
     }
 

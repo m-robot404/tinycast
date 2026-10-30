@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 /// The one control surface a form draws, kept here rather than in `DesignSystem`.
 struct ExtensionFieldChrome: ViewModifier {
@@ -54,10 +55,12 @@ struct ExtensionDisclosureChevron: View {
     var flipped = false
 
     var body: some View {
-        // Closed it always points down; open, it points back at the list it dropped.
-        Image(systemName: pointsUp ? "chevron.up" : "chevron.down")
-            .font(metrics.typography.disclosure)
-            .foregroundStyle(Theme.Colors.textSecondary)
+        WithObservationTracking {
+            // Closed it always points down; open, it points back at the list it dropped.
+                    Image(systemName: pointsUp ? "chevron.up" : "chevron.down")
+                        .font(metrics.typography.disclosure)
+                        .foregroundStyle(Theme.Colors.textSecondary)
+        }
     }
 
     private var pointsUp: Bool { open && !flipped }
@@ -74,40 +77,42 @@ struct ExtensionPickerRow: View {
     let onActivate: () -> Void
 
     var body: some View {
-        Button(action: onActivate) {
-            HStack(spacing: metrics.spacing.md) {
-                if let icon {
-                    ExtensionIconView(
-                        resolved: icon, size: metrics.size.menuIcon, usesMenuSymbolStyle: true)
-                }
-                Text(title)
-                    .font(metrics.typography.menuRow)
-                    .lineLimit(1)
-                Spacer(minLength: metrics.spacing.sm)
-                if let detail {
-                    Text(detail)
-                        .font(metrics.typography.menuShortcut)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-                if checked {
-                    Image(systemName: "checkmark")
-                        .font(metrics.typography.disclosure)
-                        .foregroundStyle(Theme.Colors.textSecondary)
-                }
-            }
-            .padding(.horizontal, metrics.spacing.md)
-            // Stated, not padded: the height maths counts rows, so a row is one exact height.
-            .frame(
-                maxWidth: .infinity, minHeight: form.popoverRowHeight,
-                maxHeight: form.popoverRowHeight, alignment: .leading
-            )
-            .contentShape(Rectangle())
-            .background(
-                RoundedRectangle(cornerRadius: metrics.radius.menuRow, style: .continuous)
-                    .fill(selected ? Theme.Colors.menuHover : Color.clear)
-            )
+        WithObservationTracking {
+            Button(action: onActivate) {
+                        HStack(spacing: metrics.spacing.md) {
+                            if let icon {
+                                ExtensionIconView(
+                                    resolved: icon, size: metrics.size.menuIcon, usesMenuSymbolStyle: true)
+                            }
+                            Text(title)
+                                .font(metrics.typography.menuRow)
+                                .lineLimit(1)
+                            Spacer(minLength: metrics.spacing.sm)
+                            if let detail {
+                                Text(detail)
+                                    .font(metrics.typography.menuShortcut)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                            }
+                            if checked {
+                                Image(systemName: "checkmark")
+                                    .font(metrics.typography.disclosure)
+                                    .foregroundStyle(Theme.Colors.textSecondary)
+                            }
+                        }
+                        .padding(.horizontal, metrics.spacing.md)
+                        // Stated, not padded: the height maths counts rows, so a row is one exact height.
+                        .frame(
+                            maxWidth: .infinity, minHeight: form.popoverRowHeight,
+                            maxHeight: form.popoverRowHeight, alignment: .leading
+                        )
+                        .contentShape(Rectangle())
+                        .background(
+                            RoundedRectangle(cornerRadius: metrics.radius.menuRow, style: .continuous)
+                                .fill(selected ? Theme.Colors.menuHover : Color.clear)
+                        )
+                    }
+                    .buttonStyle(.plain)
         }
-        .buttonStyle(.plain)
     }
 }

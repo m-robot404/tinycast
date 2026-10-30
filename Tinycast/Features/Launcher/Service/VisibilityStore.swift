@@ -1,4 +1,5 @@
 import Foundation
+import ObservationPolyfill
 
 /// A category that is off runs nothing, so it gates shortcuts as well as the list.
 @MainActor

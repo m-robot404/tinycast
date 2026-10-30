@@ -1,4 +1,5 @@
 import AVFoundation
+import ObservationPolyfill
 import SwiftUI
 
 struct CameraStage: View {
@@ -6,13 +7,15 @@ struct CameraStage: View {
     var mirrored = true
 
     var body: some View {
-        switch feed {
-        case .live(let capture):
-            CameraFeed(session: capture, mirrored: mirrored)
-        case .denied:
-            unavailable(String(localized: "Tinycast has no access to the camera."))
-        case .noCamera:
-            unavailable(String(localized: "No camera on this Mac."))
+        WithObservationTracking {
+            switch feed {
+                    case .live(let capture):
+                        CameraFeed(session: capture, mirrored: mirrored)
+                    case .denied:
+                        unavailable(String(localized: "Tinycast has no access to the camera."))
+                    case .noCamera:
+                        unavailable(String(localized: "No camera on this Mac."))
+                    }
         }
     }
 

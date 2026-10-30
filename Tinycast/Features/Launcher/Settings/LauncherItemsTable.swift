@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 import SwiftUI
 
 /// Launcher items as a table in one `Form` row, reusing a screenful of hosted rows as it scrolls.
@@ -234,27 +235,29 @@ private struct LauncherItemCell: View {
     var onTab: @MainActor () -> Bool = { false }
 
     var body: some View {
-        VStack(spacing: 0) {
-            Divider().opacity(showsDivider ? 1 : 0)
-            LauncherItemRow(entry: entry)
-                // Rows are separate hosting views; the key view loop doesn't run from one to the next.
-                .onKeyPress(.tab, phases: .down) { press in
-                    !press.modifiers.contains(.shift) && onTab() ? .handled : .ignored
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        WithObservationTracking {
+            VStack(spacing: 0) {
+                        Divider().opacity(showsDivider ? 1 : 0)
+                        LauncherItemRow(entry: entry)
+                            // Rows are separate hosting views; the key view loop doesn't run from one to the next.
+                            .onKeyPress(.tab, phases: .down) { press in
+                                !press.modifiers.contains(.shift) && onTab() ? .handled : .ignored
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                    .disabled(!isEnabled)
+                    // The recorder's anchor can't leave this hosting view; its bounds go out by hand.
+                    .overlayPreferenceValue(ShortcutRecorderAnchorKey.self) { anchor in
+                        GeometryReader { proxy in
+                            Color.clear.onChange(of: anchor.map { proxy[$0] }, initial: true) { _, frame in
+                                onRecorderFrame(frame)
+                            }
+                        }
+                    }
+                    .environment(visibility)
+                    .environment(aliases)
+                    .environment(hotKeys)
+                    .motionScope()
         }
-        .disabled(!isEnabled)
-        // The recorder's anchor can't leave this hosting view; its bounds go out by hand.
-        .overlayPreferenceValue(ShortcutRecorderAnchorKey.self) { anchor in
-            GeometryReader { proxy in
-                Color.clear.onChange(of: anchor.map { proxy[$0] }, initial: true) { _, frame in
-                    onRecorderFrame(frame)
-                }
-            }
-        }
-        .environment(visibility)
-        .environment(aliases)
-        .environment(hotKeys)
-        .motionScope()
     }
 }

@@ -1,4 +1,5 @@
 import Combine
+import ObservationPolyfill
 import SwiftUI
 
 /// A peer of the AI pane, not a section in it: it only borrows the provider layer.
@@ -17,75 +18,77 @@ struct QuickActionsSettingsView: View {
     private let refreshTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
-        Form {
-            Section {
-                Toggle(isOn: enabledBinding) {
-                    SettingsFeatureToggleLabel(
-                        anchor: .quickActionsQuickActions, title: "Enable Quick Actions",
-                        subtitle: "Act on selected text. Nothing is read until you press a shortcut.")
-                }
-                if appSettings.quickActionsEnabled, !isTrusted {
-                    // Every shortcut fails without it; better said here than found one press later.
-                    HStack(alignment: .center, spacing: Theme.Spacing.lg) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .foregroundStyle(.orange)
-                            .frame(width: Theme.Size.settingsRowIcon)
-                        VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-                            Text("Accessibility permission required")
-                                .foregroundStyle(.orange)
-                            Text("Needed to read your selection.")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+        WithObservationTracking {
+            Form {
+                        Section {
+                            Toggle(isOn: enabledBinding) {
+                                SettingsFeatureToggleLabel(
+                                    anchor: .quickActionsQuickActions, title: "Enable Quick Actions",
+                                    subtitle: "Act on selected text. Nothing is read until you press a shortcut.")
+                            }
+                            if appSettings.quickActionsEnabled, !isTrusted {
+                                // Every shortcut fails without it; better said here than found one press later.
+                                HStack(alignment: .center, spacing: Theme.Spacing.lg) {
+                                    Image(systemName: "exclamationmark.triangle.fill")
+                                        .foregroundStyle(.orange)
+                                        .frame(width: Theme.Size.settingsRowIcon)
+                                    VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                                        Text("Accessibility permission required")
+                                            .foregroundStyle(.orange)
+                                        Text("Needed to read your selection.")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    Spacer(minLength: Theme.Spacing.lg)
+                                    Button("Open System Settings") { Permissions.openAccessibilitySettings() }
+                                }
+                            }
+                        } header: {
+                            SettingsSectionHeader(.quickActionsQuickActions)
                         }
-                        Spacer(minLength: Theme.Spacing.lg)
-                        Button("Open System Settings") { Permissions.openAccessibilitySettings() }
-                    }
-                }
-            } header: {
-                SettingsSectionHeader(.quickActionsQuickActions)
-            }
 
-            Group {
-                actionsSection
-                modelSection
-                languageSection
-            }
-            .settingsEnabled(appSettings.quickActionsEnabled)
+                        Group {
+                            actionsSection
+                            modelSection
+                            languageSection
+                        }
+                        .settingsEnabled(appSettings.quickActionsEnabled)
+                    }
+                    .formStyle(.grouped)
+                    .settingsScrollTarget(.quickActions)
+                    .onReceive(refreshTimer) { _ in isTrusted = Permissions.isAccessibilityTrusted() }
+                    .settingsEditorPanel(item: $editingAction) { action in
+                        InstructionsEditorPanel(
+                            action: action,
+                            instructionOverride: store.settings.instructionOverride(for: action),
+                            modelOverride: store.modelOverride(for: .builtIn(action))
+                        ) { instructionOverride, modelOverride in
+                            store.settings.setInstructionOverride(instructionOverride, for: action)
+                            store.setModelOverride(modelOverride, for: .builtIn(action))
+                        }
+                    }
+                    .settingsEditorPanel(item: $customEditing) { request in
+                        CustomQuickActionEditorPanel(
+                            request: request,
+                            model: request.action.flatMap { store.modelOverride(for: .custom($0)) })
+                    }
+                    .onAppear {
+                        core.quickActionCoordinator.loadLanguages()
+                        store.repairModel(against: aiSettings.connections, fallback: aiSettings.defaultModel)
+                        store.resolveModel(
+                            appleIntelligenceAvailable: aiSettings.isAppleIntelligenceAvailable(),
+                            fallback: aiSettings.defaultModel)
+                        core.applyInstalledAILifecycle()
+                    }
+                    .onChange(of: appSettings.aiEnabled) { repairInstalledModel() }
+                    .onChange(of: aiSettings.enabledInstalledProviders) {
+                        core.applyInstalledAILifecycle()
+                        repairInstalledModel()
+                    }
+                    .onChange(of: core.chatGPTSubscription.models) { repairInstalledModel() }
+                    .onChange(of: core.chatGPTSubscription.phase) { repairInstalledModel() }
+                    .onChange(of: core.installedAI.statuses) { repairInstalledModel() }
         }
-        .formStyle(.grouped)
-        .settingsScrollTarget(.quickActions)
-        .onReceive(refreshTimer) { _ in isTrusted = Permissions.isAccessibilityTrusted() }
-        .settingsEditorPanel(item: $editingAction) { action in
-            InstructionsEditorPanel(
-                action: action,
-                instructionOverride: store.settings.instructionOverride(for: action),
-                modelOverride: store.modelOverride(for: .builtIn(action))
-            ) { instructionOverride, modelOverride in
-                store.settings.setInstructionOverride(instructionOverride, for: action)
-                store.setModelOverride(modelOverride, for: .builtIn(action))
-            }
-        }
-        .settingsEditorPanel(item: $customEditing) { request in
-            CustomQuickActionEditorPanel(
-                request: request,
-                model: request.action.flatMap { store.modelOverride(for: .custom($0)) })
-        }
-        .onAppear {
-            core.quickActionCoordinator.loadLanguages()
-            store.repairModel(against: aiSettings.connections, fallback: aiSettings.defaultModel)
-            store.resolveModel(
-                appleIntelligenceAvailable: aiSettings.isAppleIntelligenceAvailable(),
-                fallback: aiSettings.defaultModel)
-            core.applyInstalledAILifecycle()
-        }
-        .onChange(of: appSettings.aiEnabled) { repairInstalledModel() }
-        .onChange(of: aiSettings.enabledInstalledProviders) {
-            core.applyInstalledAILifecycle()
-            repairInstalledModel()
-        }
-        .onChange(of: core.chatGPTSubscription.models) { repairInstalledModel() }
-        .onChange(of: core.chatGPTSubscription.phase) { repairInstalledModel() }
-        .onChange(of: core.installedAI.statuses) { repairInstalledModel() }
     }
 
     private var actionsSection: some View {
@@ -306,37 +309,39 @@ struct QuickActionsSettingsView: View {
         }
 
         var body: some View {
-            VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
-                SettingsEditorHeader(
-                    title: "Customize \(action.title)",
-                    subtitle: "Tell Tinycast how you want \(action.title) to handle your selected text."
-                )
+            WithObservationTracking {
+                VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
+                                SettingsEditorHeader(
+                                    title: "Customize \(action.title)",
+                                    subtitle: "Tell Tinycast how you want \(action.title) to handle your selected text."
+                                )
 
-                TextEditor(text: $instructions)
-                    .font(.body)
-                    .settingsEditorTextArea(height: Theme.Size.editorTextHeight * 2)
+                                TextEditor(text: $instructions)
+                                    .font(.body)
+                                    .settingsEditorTextArea(height: Theme.Size.editorTextHeight * 2)
 
-                QuickActionModelPicker(selection: $model)
+                                QuickActionModelPicker(selection: $model)
 
-                HStack(spacing: Theme.Spacing.md) {
-                    Button("Use Default") { instructions = builtIn }
-                        .buttonStyle(.modalAction(.standard, fillsWidth: false))
-                        .disabled(instructions == builtIn)
-                    Spacer()
-                    Button("Cancel") { dismiss() }
-                        .buttonStyle(.modalAction(.cancel))
-                        .keyboardShortcut(.cancelAction)
-                    Button("Save") {
-                        onSave(instructions == builtIn ? nil : instructions, model)
-                        dismiss()
-                    }
-                    .buttonStyle(.modalAction(.primary))
-                    .keyboardShortcut(.defaultAction)
-                }
+                                HStack(spacing: Theme.Spacing.md) {
+                                    Button("Use Default") { instructions = builtIn }
+                                        .buttonStyle(.modalAction(.standard, fillsWidth: false))
+                                        .disabled(instructions == builtIn)
+                                    Spacer()
+                                    Button("Cancel") { dismiss() }
+                                        .buttonStyle(.modalAction(.cancel))
+                                        .keyboardShortcut(.cancelAction)
+                                    Button("Save") {
+                                        onSave(instructions == builtIn ? nil : instructions, model)
+                                        dismiss()
+                                    }
+                                    .buttonStyle(.modalAction(.primary))
+                                    .keyboardShortcut(.defaultAction)
+                                }
+                            }
+                            .padding(Theme.Spacing.dialogInset)
+                            .frame(width: Theme.Size.editorSheetWidth)
+                            .settingsEditorPanelSurface()
             }
-            .padding(Theme.Spacing.dialogInset)
-            .frame(width: Theme.Size.editorSheetWidth)
-            .settingsEditorPanelSurface()
         }
     }
 }

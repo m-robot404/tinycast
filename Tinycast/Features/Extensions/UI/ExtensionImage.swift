@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 extension EnvironmentValues {
     /// Derived, not stored, so a `{light, dark}` icon follows the surface it is drawn on.
@@ -380,13 +381,15 @@ struct ExtensionIconView: View {
     private var side: CGFloat { size ?? metrics.size.rowIcon }
 
     var body: some View {
-        content
-            .frame(width: side, height: side)
-            .clipShape(shape)
-            // Keyed on appearance too: an inline SVG's palette resolves at decode.
-            .task(id: ExtensionImage.LoadKey(source: resolved?.source, isDark: isDark)) {
-                loaded = await ExtensionImage.load(resolved, isDark: isDark, animates: animates)
-            }
+        WithObservationTracking {
+            content
+                        .frame(width: side, height: side)
+                        .clipShape(shape)
+                        // Keyed on appearance too: an inline SVG's palette resolves at decode.
+                        .task(id: ExtensionImage.LoadKey(source: resolved?.source, isDark: isDark)) {
+                            loaded = await ExtensionImage.load(resolved, isDark: isDark, animates: animates)
+                        }
+        }
     }
 
     @ViewBuilder

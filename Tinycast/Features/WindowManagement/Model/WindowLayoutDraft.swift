@@ -1,4 +1,5 @@
 import CoreGraphics
+import ObservationPolyfill
 import Foundation
 
 /// One in-flight edit of a layout. Owned by the editor sheet and gone when it closes.

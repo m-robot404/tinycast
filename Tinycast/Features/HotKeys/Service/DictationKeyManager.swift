@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 
 /// Lends 🎤 to Tinycast as F20. See docs/features/hotkeys.md#the-dictation-key.
 @MainActor

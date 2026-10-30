@@ -1,4 +1,5 @@
 import Observation
+import ObservationPolyfill
 
 /// Not on `AppCore`: one window's session, released in `windowWillClose` so history never survives.
 @MainActor

@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 import SwiftUI
 
 struct RevealableSecureField: View {
@@ -13,34 +14,36 @@ struct RevealableSecureField: View {
     private enum Field { case secure, plain }
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.sm) {
-            if isRevealed {
-                TextField(title, text: $text, prompt: prompt)
-                    .autocorrectionDisabled()
-                    .writingToolsBehavior(.disabled)
-                    .focused($focusedField, equals: .plain)
-            } else {
-                SecureField(title, text: $text, prompt: prompt)
-                    .focused($focusedField, equals: .secure)
-            }
-            Button {
-                setRevealed(!isRevealed)
-            } label: {
-                Image(systemName: isRevealed ? "eye.slash" : "eye")
-                    .foregroundStyle(.secondary)
-            }
-            .buttonStyle(.plain)
-            .help(isRevealed ? "Hide" : "Show")
-            .disabled(text.isEmpty)
-            .accessibilityLabel(isRevealed ? "Hide \(title)" : "Show \(title)")
-        }
-        .onChange(of: text.isEmpty) { _, isEmpty in
-            if isEmpty, isRevealed { setRevealed(false) }
-        }
-        .onChange(of: focusedField) { _, field in
-            guard field != nil, let selection = carriedSelection else { return }
-            carriedSelection = nil
-            restore(selection)
+        WithObservationTracking {
+            HStack(spacing: Theme.Spacing.sm) {
+                        if isRevealed {
+                            TextField(title, text: $text, prompt: prompt)
+                                .autocorrectionDisabled()
+                                .writingToolsBehavior(.disabled)
+                                .focused($focusedField, equals: .plain)
+                        } else {
+                            SecureField(title, text: $text, prompt: prompt)
+                                .focused($focusedField, equals: .secure)
+                        }
+                        Button {
+                            setRevealed(!isRevealed)
+                        } label: {
+                            Image(systemName: isRevealed ? "eye.slash" : "eye")
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .help(isRevealed ? "Hide" : "Show")
+                        .disabled(text.isEmpty)
+                        .accessibilityLabel(isRevealed ? "Hide \(title)" : "Show \(title)")
+                    }
+                    .onChange(of: text.isEmpty) { _, isEmpty in
+                        if isEmpty, isRevealed { setRevealed(false) }
+                    }
+                    .onChange(of: focusedField) { _, field in
+                        guard field != nil, let selection = carriedSelection else { return }
+                        carriedSelection = nil
+                        restore(selection)
+                    }
         }
     }
 

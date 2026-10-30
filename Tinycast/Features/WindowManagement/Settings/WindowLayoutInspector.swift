@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 import SwiftUI
 
 struct WindowLayoutInspector: View {
@@ -18,34 +19,36 @@ struct WindowLayoutInspector: View {
     ]
 
     var body: some View {
-        // Insurance only: at any normal text size every group fits the panel's stated height.
-        ScrollView {
-            VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
-                nameField
-                gapToggle
-                Divider()
-                sectionLabel("Layout")
-                WindowLayoutEntryPicker(draft: draft, displays: displays)
-                if draft.selectedEntry != nil {
-                    WindowLayoutArgumentField(draft: draft)
-                    frontmostToggle
-                    Divider()
-                    sizeFields
-                    offsetFields
-                    positionField
-                }
-            }
-            .padding(Theme.Spacing.xxl)
-            .frame(maxWidth: .infinity, alignment: .leading)
+        WithObservationTracking {
+            // Insurance only: at any normal text size every group fits the panel's stated height.
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
+                            nameField
+                            gapToggle
+                            Divider()
+                            sectionLabel("Layout")
+                            WindowLayoutEntryPicker(draft: draft, displays: displays)
+                            if draft.selectedEntry != nil {
+                                WindowLayoutArgumentField(draft: draft)
+                                frontmostToggle
+                                Divider()
+                                sizeFields
+                                offsetFields
+                                positionField
+                            }
+                        }
+                        .padding(Theme.Spacing.xxl)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .scrollBounceBehavior(.basedOnSize)
         }
-        .scrollBounceBehavior(.basedOnSize)
     }
 
     // MARK: - Layout-wide
 
     /// The picker lives inside the field's chrome, so name and icon read as the one control.
     private var nameField: some View {
-        @Bindable var draft = draft
+        @ObservationPolyfill.Bindable var draft = draft
         return VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
             sectionLabel("Name")
             HStack(spacing: Theme.Spacing.sm) {
@@ -82,7 +85,7 @@ struct WindowLayoutInspector: View {
     }
 
     private var gapToggle: some View {
-        @Bindable var draft = draft
+        @ObservationPolyfill.Bindable var draft = draft
         return switchRow(
             "Use preferred gap",
             detail: "Inset every window by the gap set above, as the tiling commands do.",
@@ -92,7 +95,7 @@ struct WindowLayoutInspector: View {
     // MARK: - The entry being edited
 
     private var frontmostToggle: some View {
-        @Bindable var draft = draft
+        @ObservationPolyfill.Bindable var draft = draft
         return switchRow(
             "Bring to front",
             detail: "Focus this window once the layout finishes. Only one window per layout.",

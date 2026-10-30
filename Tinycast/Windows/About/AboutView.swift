@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 import SwiftUI
 
 struct AboutView: View {
@@ -25,23 +26,25 @@ struct AboutView: View {
     private static let supportTile: CGFloat = 30
 
     var body: some View {
-        VStack(spacing: 0) {
-            Form {
-                Section {
-                    hero
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, Theme.Spacing.lg)
-                }
-                .settingsAnchor(.aboutAbout)
-                links
-                support
-            }
-            .formStyle(.grouped)
-            .settingsScrollTarget(.about)
+        WithObservationTracking {
+            VStack(spacing: 0) {
+                        Form {
+                            Section {
+                                hero
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, Theme.Spacing.lg)
+                            }
+                            .settingsAnchor(.aboutAbout)
+                            links
+                            support
+                        }
+                        .formStyle(.grouped)
+                        .settingsScrollTarget(.about)
 
-            // Outside the form, so the copyright stays pinned to the bottom edge.
-            footer
-                .padding(.bottom, Theme.Spacing.xxl)
+                        // Outside the form, so the copyright stays pinned to the bottom edge.
+                        footer
+                            .padding(.bottom, Theme.Spacing.xxl)
+                    }
         }
     }
 
@@ -170,29 +173,31 @@ private struct AboutLinkRow: View {
     @State private var hovered = false
 
     var body: some View {
-        Button {
-            NSWorkspace.shared.open(link.url)
-        } label: {
-            LabeledContent {
-                HStack(spacing: Theme.Spacing.sm) {
-                    Text(link.detail)
-                        .foregroundStyle(.tertiary)
-                        .lineLimit(1)
-                    Image(systemName: "arrow.up.right")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(hovered ? .secondary : .tertiary)
-                }
-            } label: {
-                Label {
-                    Text(link.title)
-                } icon: {
-                    glyph
-                }
-            }
-            .contentShape(Rectangle())
+        WithObservationTracking {
+            Button {
+                        NSWorkspace.shared.open(link.url)
+                    } label: {
+                        LabeledContent {
+                            HStack(spacing: Theme.Spacing.sm) {
+                                Text(link.detail)
+                                    .foregroundStyle(.tertiary)
+                                    .lineLimit(1)
+                                Image(systemName: "arrow.up.right")
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(hovered ? .secondary : .tertiary)
+                            }
+                        } label: {
+                            Label {
+                                Text(link.title)
+                            } icon: {
+                                glyph
+                            }
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .onHover { hovered = $0 }
         }
-        .buttonStyle(.plain)
-        .onHover { hovered = $0 }
     }
 
     @ViewBuilder

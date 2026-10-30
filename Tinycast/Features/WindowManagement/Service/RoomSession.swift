@@ -1,4 +1,5 @@
 import Foundation
+import ObservationPolyfill
 
 /// The Rooms screens' state while one is open: the desk read once, and the picker's choice.
 @MainActor

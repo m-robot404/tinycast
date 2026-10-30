@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 import SwiftUI
 
 /// Identifies the editor to present; nil is "new", and the UUID keeps two opens distinct.
@@ -24,59 +25,61 @@ struct CustomWindowSizeEditorPanel: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
-            SettingsEditorHeader(
-                title: isNew ? "New Custom Size" : "Edit Custom Size",
-                subtitle: "Resizes the window you were last in, on the display it is already on.")
+        WithObservationTracking {
+            VStack(alignment: .leading, spacing: Theme.Spacing.xl) {
+                        SettingsEditorHeader(
+                            title: isNew ? "New Custom Size" : "Edit Custom Size",
+                            subtitle: "Resizes the window you were last in, on the display it is already on.")
 
-            field("Name") {
-                TextField("Wide Center", text: $size.name)
-                    .settingsEditorTextField()
-            }
+                        field("Name") {
+                            TextField("Wide Center", text: $size.name)
+                                .settingsEditorTextField()
+                        }
 
-            field("Size") {
-                HStack(spacing: Theme.Spacing.lg) {
-                    dimensionField(
-                        label: String(localized: "W"), name: String(localized: "Width"),
-                        dimension: $size.width,
-                        available: reference.width)
-                    dimensionField(
-                        label: String(localized: "H"), name: String(localized: "Height"),
-                        dimension: $size.height,
-                        available: reference.height)
-                }
-            }
+                        field("Size") {
+                            HStack(spacing: Theme.Spacing.lg) {
+                                dimensionField(
+                                    label: String(localized: "W"), name: String(localized: "Width"),
+                                    dimension: $size.width,
+                                    available: reference.width)
+                                dimensionField(
+                                    label: String(localized: "H"), name: String(localized: "Height"),
+                                    dimension: $size.height,
+                                    available: reference.height)
+                            }
+                        }
 
-            field("Offset") {
-                HStack(spacing: Theme.Spacing.lg) {
-                    offsetField(label: "X", name: String(localized: "Horizontal offset"), value: \.x)
-                    offsetField(label: "Y", name: String(localized: "Vertical offset"), value: \.y)
-                }
-            }
+                        field("Offset") {
+                            HStack(spacing: Theme.Spacing.lg) {
+                                offsetField(label: "X", name: String(localized: "Horizontal offset"), value: \.x)
+                                offsetField(label: "Y", name: String(localized: "Vertical offset"), value: \.y)
+                            }
+                        }
 
-            field("Position") {
-                WindowLayoutPositionGrid(selection: size.anchor) { size.anchor = $0 }
-            }
+                        field("Position") {
+                            WindowLayoutPositionGrid(selection: size.anchor) { size.anchor = $0 }
+                        }
 
-            if let errorMessage {
-                Text(errorMessage)
-                    .font(.callout)
-                    .foregroundStyle(Theme.Colors.destructive)
-            }
+                        if let errorMessage {
+                            Text(errorMessage)
+                                .font(.callout)
+                                .foregroundStyle(Theme.Colors.destructive)
+                        }
 
-            HStack(spacing: Theme.Spacing.md) {
-                Button("Cancel") { dismiss() }
-                    .buttonStyle(.modalAction(.cancel))
-                    .keyboardShortcut(.cancelAction)
-                Button("Save", action: save)
-                    .buttonStyle(.modalAction(.primary))
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(!canSave)
-            }
+                        HStack(spacing: Theme.Spacing.md) {
+                            Button("Cancel") { dismiss() }
+                                .buttonStyle(.modalAction(.cancel))
+                                .keyboardShortcut(.cancelAction)
+                            Button("Save", action: save)
+                                .buttonStyle(.modalAction(.primary))
+                                .keyboardShortcut(.defaultAction)
+                                .disabled(!canSave)
+                        }
+                    }
+                    .padding(Theme.Spacing.dialogInset)
+                    .frame(width: Theme.Size.editorSheetWidth)
+                    .settingsEditorPanelSurface()
         }
-        .padding(Theme.Spacing.dialogInset)
-        .frame(width: Theme.Size.editorSheetWidth)
-        .settingsEditorPanelSurface()
     }
 
     private func field(
@@ -115,7 +118,7 @@ struct CustomWindowSizeEditorPanel: View {
             .labelsHidden()
             .pickerStyle(.segmented)
             .controlSize(.large)
-            .buttonBorderShape(.roundedRectangle(radius: Theme.Radius.barControl))
+            .buttonBorderShape(.roundedRectangle)
             .fixedSize()
         }
     }

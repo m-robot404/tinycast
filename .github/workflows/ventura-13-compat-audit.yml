@@ -1,0 +1,90 @@
+name: Ventura 13 compatibility audit
+
+on:
+  push:
+    branches:
+      - ventura-13-port
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ventura-13-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    # Use the current macOS 26 runner and its preselected Xcode SDK to compile against
+    # the macOS 13 deployment target; real Ventura runtime validation remains required.
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify installed Xcode and Swift toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          swift --version
+
+      - name: Regenerate Xcode project from project.yml
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v xcodegen >/dev/null 2>&1; then
+            brew install xcodegen
+          fi
+          xcodegen generate
+          python3 Scripts/prepare-ventura13.py
+
+      - name: Persist generated Ventura source updates
+        if: github.event_name == 'push' && github.ref == 'refs/heads/ventura-13-port'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Tinycast Tinycast.xcodeproj
+          if git diff --cached --quiet; then
+            echo "No generated source updates to commit."
+          else
+            git commit -m "fix: normalize Ventura SwiftUI observation builders"
+            git push origin HEAD:ventura-13-port
+          fi
+
+      - name: Build app and embedded helpers for macOS 13
+        shell: bash
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -skipMacroValidation \
+            -project Tinycast.xcodeproj \
+            -scheme Tinycast \
+            -configuration Debug \
+            -destination 'platform=macOS' \
+            -derivedDataPath "$RUNNER_TEMP/VenturaDerivedData" \
+            MACOSX_DEPLOYMENT_TARGET=13.0 \
+            ARCHS=arm64 \
+            ONLY_ACTIVE_ARCH=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            build 2>&1 | tee "$RUNNER_TEMP/ventura-build.log"
+
+      - name: Upload unsigned Apple Silicon app build
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tinycast-ventura13-unsigned-arm64
+          path: "${{ runner.temp }}/VenturaDerivedData/Build/Products/Debug/Tinycast Dev.app"
+          if-no-files-found: error
+
+      - name: Upload build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ventura-13-build-diagnostics
+          path: |
+            ${{ runner.temp }}/ventura-build.log
+            ${{ runner.temp }}/VenturaDerivedData/Logs/Build
+          if-no-files-found: ignore

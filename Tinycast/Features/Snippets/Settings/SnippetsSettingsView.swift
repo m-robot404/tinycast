@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct SnippetsSettingsView: View {
     @Environment(AppCore.self) private var core
@@ -7,49 +8,51 @@ struct SnippetsSettingsView: View {
     @Environment(AppSettings.self) private var settings
 
     var body: some View {
-        @Bindable var settings = settings
-        return Form {
-            FeatureSwitchSection(
-                anchor: .snippetsSnippets,
-                enableTitle: "Enable snippets",
-                enableSubtitle: "Expand templates from the launcher or by keyword.",
-                // Enabling is also keyword-expansion consent, so it uses the confirming setter.
-                isEnabled: Binding(
-                    get: { settings.snippetsEnabled },
-                    set: { coordinator.setSnippetsEnabled($0) }),
-                showsInLauncher: $settings.snippetsShowInLauncher,
-                showsIcon: true,
-                showsHeader: false)
+        WithObservationTracking {
+            @ObservationPolyfill.Bindable var settings = settings
+                    Form {
+                        FeatureSwitchSection(
+                            anchor: .snippetsSnippets,
+                            enableTitle: "Enable snippets",
+                            enableSubtitle: "Expand templates from the launcher or by keyword.",
+                            // Enabling is also keyword-expansion consent, so it uses the confirming setter.
+                            isEnabled: Binding(
+                                get: { settings.snippetsEnabled },
+                                set: { coordinator.setSnippetsEnabled($0) }),
+                            showsInLauncher: $settings.snippetsShowInLauncher,
+                            showsIcon: true,
+                            showsHeader: false)
 
-            if settings.snippetsEnabled, core.snippetListener.status == .needsAccessibility {
-                Section {
-                    LabeledContent {
-                        Button("Grant Access…") { Permissions.openAccessibilitySettings() }
-                    } label: {
-                        HStack(alignment: .center, spacing: Theme.Spacing.lg) {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundStyle(.orange)
-                                .frame(width: SettingsListMetrics.iconSize)
-                            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-                                Text("Keyword expansion needs Accessibility access")
-                                    .foregroundStyle(.orange)
-                                Text("Launcher search still works.")
-                                    .foregroundStyle(.secondary)
+                        if settings.snippetsEnabled, core.snippetListener.status == .needsAccessibility {
+                            Section {
+                                LabeledContent {
+                                    Button("Grant Access…") { Permissions.openAccessibilitySettings() }
+                                } label: {
+                                    HStack(alignment: .center, spacing: Theme.Spacing.lg) {
+                                        Image(systemName: "exclamationmark.triangle.fill")
+                                            .foregroundStyle(.orange)
+                                            .frame(width: SettingsListMetrics.iconSize)
+                                        VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                                            Text("Keyword expansion needs Accessibility access")
+                                                .foregroundStyle(.orange)
+                                            Text("Launcher search still works.")
+                                                .foregroundStyle(.secondary)
+                                        }
+                                    }
+                                }
                             }
                         }
-                    }
-                }
-            }
 
-            Group {
-                FeatureCommandsSection(owner: .snippets, anchor: .snippetsCommands)
-                library
-                libraryNotices
-            }
-            .settingsEnabled(settings.snippetsEnabled)
+                        Group {
+                            FeatureCommandsSection(owner: .snippets, anchor: .snippetsCommands)
+                            library
+                            libraryNotices
+                        }
+                        .settingsEnabled(settings.snippetsEnabled)
+                    }
+                    .formStyle(.grouped)
+                    .settingsScrollTarget(.snippets)
         }
-        .formStyle(.grouped)
-        .settingsScrollTarget(.snippets)
     }
 
     private var library: some View {
@@ -156,29 +159,31 @@ private struct SnippetSettingsRow: View {
     let onDelete: () -> Void
 
     var body: some View {
-        SettingsRow(title: record.snippet.name, subtitle: metadata) {
-            Image(systemName: "doc.text")
-                .font(.system(size: Theme.Size.settingsRowIcon - Theme.Spacing.xs))
-                .frame(width: SettingsListMetrics.iconSize, height: SettingsListMetrics.iconSize)
-        } trailing: {
-            // A disabled snippet's shortcut fires into the funnel's refusal, so it dims too.
-            ShortcutRecorder(action: .snippet(id: record.id))
-                .settingsEnabled(record.snippet.isEnabled)
+        WithObservationTracking {
+            SettingsRow(title: record.snippet.name, subtitle: metadata) {
+                        Image(systemName: "doc.text")
+                            .font(.system(size: Theme.Size.settingsRowIcon - Theme.Spacing.xs))
+                            .frame(width: SettingsListMetrics.iconSize, height: SettingsListMetrics.iconSize)
+                    } trailing: {
+                        // A disabled snippet's shortcut fires into the funnel's refusal, so it dims too.
+                        ShortcutRecorder(action: .snippet(id: record.id))
+                            .settingsEnabled(record.snippet.isEnabled)
 
-            Button(action: onEdit) {
-                Image(systemName: "pencil")
-            }
-            .buttonStyle(.plain)
-            .help("Edit Snippet")
-            .accessibilityLabel("Edit \(record.snippet.name)")
+                        Button(action: onEdit) {
+                            Image(systemName: "pencil")
+                        }
+                        .buttonStyle(.plain)
+                        .help("Edit Snippet")
+                        .accessibilityLabel("Edit \(record.snippet.name)")
 
-            Button(action: onDelete) {
-                Image(systemName: "trash")
-                    .foregroundStyle(.red)
-            }
-            .buttonStyle(.plain)
-            .help("Delete Snippet")
-            .accessibilityLabel("Delete \(record.snippet.name)")
+                        Button(action: onDelete) {
+                            Image(systemName: "trash")
+                                .foregroundStyle(.red)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Delete Snippet")
+                        .accessibilityLabel("Delete \(record.snippet.name)")
+                    }
         }
     }
 

@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 @MainActor
 final class OnboardingCoordinator {

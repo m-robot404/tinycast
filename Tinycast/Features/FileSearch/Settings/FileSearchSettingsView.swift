@@ -1,33 +1,36 @@
 import Combine
+import ObservationPolyfill
 import SwiftUI
 
 struct FileSearchSettingsView: View {
     @Environment(AppSettings.self) private var settings
 
     var body: some View {
-        @Bindable var settings = settings
-        return Form {
-            FeatureSwitchSection(
-                anchor: .fileSearchFileSearch,
-                enableTitle: "Enable File Search",
-                enableSubtitle: "Indexes your disk for instant results. Needs Full Disk Access.",
-                isEnabled: $settings.fileSearchEnabled,
-                showsInLauncher: $settings.fileSearchShowInLauncher,
-                showsIcon: true,
-                showsHeader: false)
+        WithObservationTracking {
+            @ObservationPolyfill.Bindable var settings = settings
+                    Form {
+                        FeatureSwitchSection(
+                            anchor: .fileSearchFileSearch,
+                            enableTitle: "Enable File Search",
+                            enableSubtitle: "Indexes your disk for instant results. Needs Full Disk Access.",
+                            isEnabled: $settings.fileSearchEnabled,
+                            showsInLauncher: $settings.fileSearchShowInLauncher,
+                            showsIcon: true,
+                            showsHeader: false)
 
-            FileSearchAccessSection()
-            FileSearchIndexSection()
-                .settingsEnabled(settings.fileSearchEnabled)
-            FeatureCommandsSection(owner: .fileSearch, anchor: .fileSearchCommands)
-                .settingsEnabled(settings.fileSearchEnabled)
-            FileSearchScopesSection()
-                .settingsEnabled(settings.fileSearchEnabled)
-            FileSearchIgnoreSection()
-                .settingsEnabled(settings.fileSearchEnabled)
+                        FileSearchAccessSection()
+                        FileSearchIndexSection()
+                            .settingsEnabled(settings.fileSearchEnabled)
+                        FeatureCommandsSection(owner: .fileSearch, anchor: .fileSearchCommands)
+                            .settingsEnabled(settings.fileSearchEnabled)
+                        FileSearchScopesSection()
+                            .settingsEnabled(settings.fileSearchEnabled)
+                        FileSearchIgnoreSection()
+                            .settingsEnabled(settings.fileSearchEnabled)
+                    }
+                    .formStyle(.grouped)
+                    .settingsScrollTarget(.fileSearch)
         }
-        .formStyle(.grouped)
-        .settingsScrollTarget(.fileSearch)
     }
 }
 
@@ -38,45 +41,47 @@ private struct FileSearchAccessSection: View {
     private let refreshTimer = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     var body: some View {
-        Section {
-            LabeledContent {
-                HStack(spacing: Theme.Spacing.lg) {
-                    HStack(spacing: Theme.Spacing.xs) {
-                        Image(systemName: granted ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
-                            .accessibilityHidden(true)
-                        Text(granted ? "Granted" : "Required")
+        WithObservationTracking {
+            Section {
+                        LabeledContent {
+                            HStack(spacing: Theme.Spacing.lg) {
+                                HStack(spacing: Theme.Spacing.xs) {
+                                    Image(systemName: granted ? "checkmark.circle.fill" : "exclamationmark.triangle.fill")
+                                        .accessibilityHidden(true)
+                                    Text(granted ? "Granted" : "Required")
+                                }
+                                .foregroundStyle(granted ? Color.green : Color.orange)
+                                Button(granted ? "Open…" : "Open Privacy Settings…") {
+                                    Permissions.openFullDiskAccessSettings()
+                                }
+                                .help("Opens Privacy & Security › Full Disk Access.")
+                            }
+                        } label: {
+                            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                                SettingsRowTitle(.fileSearchFullDiskAccess, "Full Disk Access")
+                                Text(granted ? "Tinycast can index every folder." : "File Search can’t index without it.")
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    } header: {
+                        SettingsSectionHeader(.fileSearchFullDiskAccess)
+                    } footer: {
+                        if !granted {
+                            Text(
+                                """
+                                File Search reads your disk directly to build a private index on this Mac. \
+                                In System Settings › Privacy & Security › Full Disk Access, turn on \
+                                Tinycast. If it isn’t listed, click + and choose Tinycast from \
+                                Applications. If access still shows as required, quit and reopen Tinycast.
+                                """
+                            )
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        }
                     }
-                    .foregroundStyle(granted ? Color.green : Color.orange)
-                    Button(granted ? "Open…" : "Open Privacy Settings…") {
-                        Permissions.openFullDiskAccessSettings()
-                    }
-                    .help("Opens Privacy & Security › Full Disk Access.")
-                }
-            } label: {
-                VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-                    SettingsRowTitle(.fileSearchFullDiskAccess, "Full Disk Access")
-                    Text(granted ? "Tinycast can index every folder." : "File Search can’t index without it.")
-                        .foregroundStyle(.secondary)
-                }
-            }
-        } header: {
-            SettingsSectionHeader(.fileSearchFullDiskAccess)
-        } footer: {
-            if !granted {
-                Text(
-                    """
-                    File Search reads your disk directly to build a private index on this Mac. \
-                    In System Settings › Privacy & Security › Full Disk Access, turn on \
-                    Tinycast. If it isn’t listed, click + and choose Tinycast from \
-                    Applications. If access still shows as required, quit and reopen Tinycast.
-                    """
-                )
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            }
+                    .onAppear(perform: refresh)
+                    .onReceive(refreshTimer) { _ in refresh() }
         }
-        .onAppear(perform: refresh)
-        .onReceive(refreshTimer) { _ in refresh() }
     }
 
     private func refresh() {
@@ -93,29 +98,31 @@ private struct FileSearchIndexSection: View {
     private var indexer: FileIndexer { core.fileIndexer }
 
     var body: some View {
-        Section {
-            LabeledContent {
-                Button("Rebuild Index") { core.fileSearchCoordinator.rebuildIndex() }
-                    .disabled(!canRebuild)
-                    .help("Crawls every scope again from scratch.")
-            } label: {
-                VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
-                    SettingsRowTitle(.fileSearchIndex, "Indexed Items")
-                    summary
+        WithObservationTracking {
+            Section {
+                        LabeledContent {
+                            Button("Rebuild Index") { core.fileSearchCoordinator.rebuildIndex() }
+                                .disabled(!canRebuild)
+                                .help("Crawls every scope again from scratch.")
+                        } label: {
+                            VStack(alignment: .leading, spacing: Theme.Spacing.xxs) {
+                                SettingsRowTitle(.fileSearchIndex, "Indexed Items")
+                                summary
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    } header: {
+                        SettingsSectionHeader(.fileSearchIndex)
+                    } footer: {
+                        Text(
+                            """
+                            Built once, then kept current as files change. Indexing uses extra memory only \
+                            while it runs.
+                            """
+                        )
+                        .font(.caption)
                         .foregroundStyle(.secondary)
-                }
-            }
-        } header: {
-            SettingsSectionHeader(.fileSearchIndex)
-        } footer: {
-            Text(
-                """
-                Built once, then kept current as files change. Indexing uses extra memory only \
-                while it runs.
-                """
-            )
-            .font(.caption)
-            .foregroundStyle(.secondary)
+                    }
         }
     }
 
@@ -158,40 +165,42 @@ private struct FileSearchScopesSection: View {
     private var isDefault: Bool { settings.fileSearchScopes == FileSearchScope.defaultScopes }
 
     var body: some View {
-        Section {
-            ForEach(settings.fileSearchScopes, id: \.self) { scope in
-                SettingsScopeRow(
-                    scope: title(for: scope),
-                    path: FileSearchScope.expand(scope, homeDirectory: home).path,
-                    isMissing: missing.contains(scope)
-                ) {
-                    settings.fileSearchScopes.removeAll { $0 == scope }
-                }
-            }
+        WithObservationTracking {
+            Section {
+                        ForEach(settings.fileSearchScopes, id: \.self) { scope in
+                            SettingsScopeRow(
+                                scope: title(for: scope),
+                                path: FileSearchScope.expand(scope, homeDirectory: home).path,
+                                isMissing: missing.contains(scope)
+                            ) {
+                                settings.fileSearchScopes.removeAll { $0 == scope }
+                            }
+                        }
 
-            HStack(spacing: Theme.Spacing.lg) {
-                Button("Add…", action: addScopes)
-                    .help("Add a folder to index and search.")
-                if !isDefault {
-                    Button("Restore Defaults") {
-                        settings.fileSearchScopes = FileSearchScope.defaultScopes
+                        HStack(spacing: Theme.Spacing.lg) {
+                            Button("Add…", action: addScopes)
+                                .help("Add a folder to index and search.")
+                            if !isDefault {
+                                Button("Restore Defaults") {
+                                    settings.fileSearchScopes = FileSearchScope.defaultScopes
+                                }
+                            }
+                        }
+                    } header: {
+                        SettingsSectionHeader(.fileSearchSearchScopes)
+                    } footer: {
+                        Text(
+                            """
+                            Only these folders and their contents are indexed. Subfolders already included do not \
+                            need to be added separately.
+                            """
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                     }
-                }
-            }
-        } header: {
-            SettingsSectionHeader(.fileSearchSearchScopes)
-        } footer: {
-            Text(
-                """
-                Only these folders and their contents are indexed. Subfolders already included do not \
-                need to be added separately.
-                """
-            )
-            .font(.caption)
-            .foregroundStyle(.secondary)
+                    .onAppear(perform: refreshMissing)
+                    .onChange(of: settings.fileSearchScopes) { _, _ in refreshMissing() }
         }
-        .onAppear(perform: refreshMissing)
-        .onChange(of: settings.fileSearchScopes) { _, _ in refreshMissing() }
     }
 
     private func title(for scope: String) -> String {
@@ -226,35 +235,37 @@ private struct FileSearchIgnoreSection: View {
     private var patterns: [String] { settings.fileSearchEffectiveIgnorePatterns }
 
     var body: some View {
-        Section {
-            ForEach(patterns, id: \.self) { pattern in
-                PatternRow(pattern: pattern) { remove(pattern) }
-            }
+        WithObservationTracking {
+            Section {
+                        ForEach(patterns, id: \.self) { pattern in
+                            PatternRow(pattern: pattern) { remove(pattern) }
+                        }
 
-            // Titled, a grouped form squeezes the field into a sliver too narrow to click.
-            HStack(spacing: Theme.Spacing.lg) {
-                TextField("Pattern", text: $draft, prompt: Text("node_modules, *.tmp or ~/Movies"))
-                    .labelsHidden()
-                    .onSubmit { add(draft) }
-                Button("Add") { add(draft) }
-                    .disabled(draft.trimmingCharacters(in: .whitespaces).isEmpty)
-                Button("Add Folder…", action: addFolders)
-                    .help("Skip a folder and everything in it.")
-                if patterns != FileSearchIgnoreList.defaults {
-                    Button("Restore Defaults", action: restoreDefaults)
-                }
-            }
-        } header: {
-            SettingsSectionHeader(.fileSearchIgnorePatterns)
-        } footer: {
-            Text(
-                """
-                Matching folders are skipped while indexing. A name like node_modules or *.tmp \
-                matches anywhere; a path like ~/Movies skips that folder.
-                """
-            )
-            .font(.caption)
-            .foregroundStyle(.secondary)
+                        // Titled, a grouped form squeezes the field into a sliver too narrow to click.
+                        HStack(spacing: Theme.Spacing.lg) {
+                            TextField("Pattern", text: $draft, prompt: Text("node_modules, *.tmp or ~/Movies"))
+                                .labelsHidden()
+                                .onSubmit { add(draft) }
+                            Button("Add") { add(draft) }
+                                .disabled(draft.trimmingCharacters(in: .whitespaces).isEmpty)
+                            Button("Add Folder…", action: addFolders)
+                                .help("Skip a folder and everything in it.")
+                            if patterns != FileSearchIgnoreList.defaults {
+                                Button("Restore Defaults", action: restoreDefaults)
+                            }
+                        }
+                    } header: {
+                        SettingsSectionHeader(.fileSearchIgnorePatterns)
+                    } footer: {
+                        Text(
+                            """
+                            Matching folders are skipped while indexing. A name like node_modules or *.tmp \
+                            matches anywhere; a path like ~/Movies skips that folder.
+                            """
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    }
         }
     }
 
@@ -312,17 +323,19 @@ private struct PatternRow: View {
     let onRemove: () -> Void
 
     var body: some View {
-        LabeledContent {
-            Button(action: onRemove) {
-                Image(systemName: "xmark.circle.fill")
-                    .foregroundStyle(.tertiary)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Remove \(pattern)")
-        } label: {
-            Text(pattern)
-                .lineLimit(1)
-                .truncationMode(.middle)
+        WithObservationTracking {
+            LabeledContent {
+                        Button(action: onRemove) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.tertiary)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Remove \(pattern)")
+                    } label: {
+                        Text(pattern)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
         }
     }
 }

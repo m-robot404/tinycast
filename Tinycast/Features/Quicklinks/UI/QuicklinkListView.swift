@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 import SwiftUI
 
 struct QuicklinkList: View {
@@ -43,41 +44,43 @@ struct QuicklinkList: View {
     }
 
     var body: some View {
-        let rows = rows
-        return ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(spacing: 0) {
-                    ForEach(rows) { row in
-                        switch row {
-                        case .header(let title):
-                            SectionHeader(title: title, isFirst: row.id == rows.first?.id)
-                        case .item(let quicklink):
-                            QuicklinkRow(
-                                quicklink: quicklink, selected: quicklink.id == selectedID
-                            )
-                            .selectionFrame(quicklink.id == selectedID)
-                            .contentShape(Rectangle())
-                            .onTapGesture { onSelect(quicklink) }
-                            .simultaneousGesture(
-                                TapGesture(count: 2).onEnded {
-                                    onSelect(quicklink)
-                                    onActivate()
+        WithObservationTracking {
+            let rows = rows
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            LazyVStack(spacing: 0) {
+                                ForEach(rows) { row in
+                                    switch row {
+                                    case .header(let title):
+                                        SectionHeader(title: title, isFirst: row.id == rows.first?.id)
+                                    case .item(let quicklink):
+                                        QuicklinkRow(
+                                            quicklink: quicklink, selected: quicklink.id == selectedID
+                                        )
+                                        .selectionFrame(quicklink.id == selectedID)
+                                        .contentShape(Rectangle())
+                                        .onTapGesture { onSelect(quicklink) }
+                                        .simultaneousGesture(
+                                            TapGesture(count: 2).onEnded {
+                                                onSelect(quicklink)
+                                                onActivate()
+                                            }
+                                        )
+                                        .onRightClick { onActions(quicklink) }
+                                    }
                                 }
-                            )
-                            .onRightClick { onActions(quicklink) }
+                            }
+                            .padding(.horizontal, metrics.spacing.md)
+                            .padding(.top, metrics.spacing.xs)
+                            .padding(.bottom, metrics.spacing.md)
+                            .hideNativeScrollers()
+                            .scrollOriginAnchor()
                         }
+                        .edgeDissolve()
+                        .thinScrollbar()
+                        .scrollFollowsSelection(
+                            scroll, row: selectedID?.uuidString, atOrigin: firstRowSelected, proxy: proxy)
                     }
-                }
-                .padding(.horizontal, metrics.spacing.md)
-                .padding(.top, metrics.spacing.xs)
-                .padding(.bottom, metrics.spacing.md)
-                .hideNativeScrollers()
-                .scrollOriginAnchor()
-            }
-            .edgeDissolve()
-            .thinScrollbar()
-            .scrollFollowsSelection(
-                scroll, row: selectedID?.uuidString, atOrigin: firstRowSelected, proxy: proxy)
         }
     }
 }
@@ -98,42 +101,44 @@ private struct QuicklinkRow: View {
     }
 
     var body: some View {
-        IconCache.observeStyle()
-        return HStack(spacing: metrics.spacing.lg) {
-            Image(nsImage: IconCache.symbolIcon(named: quicklink.symbol))
-                .resizable()
-                .frame(width: metrics.size.resultRowIcon, height: metrics.size.resultRowIcon)
-            VStack(alignment: .leading, spacing: metrics.spacing.xxs) {
-                Text(quicklink.name)
-                    .font(metrics.typography.rowTitle)
-                    .lineLimit(1)
-                Text(quicklink.link)
-                    .font(metrics.typography.rowTrailing)
-                    .foregroundStyle(Theme.Colors.textTertiary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-            }
-            Spacer(minLength: metrics.spacing.lg)
-            if !quicklink.showsInRootSearch {
-                Image(systemName: "eye.slash")
-                    .font(.system(size: 10))
-                    .foregroundStyle(Theme.Colors.textTertiary)
-            }
-            if let keycaps = hotKeys.binding(for: .quicklink(id: quicklink.id))?.keycaps {
-                HStack(spacing: metrics.spacing.xxs) {
-                    ForEach(Array(keycaps.enumerated()), id: \.offset) { _, cap in
-                        KeyCapChip(text: cap, style: .outline)
+        WithObservationTracking {
+            IconCache.observeStyle()
+                    HStack(spacing: metrics.spacing.lg) {
+                        Image(nsImage: IconCache.symbolIcon(named: quicklink.symbol))
+                            .resizable()
+                            .frame(width: metrics.size.resultRowIcon, height: metrics.size.resultRowIcon)
+                        VStack(alignment: .leading, spacing: metrics.spacing.xxs) {
+                            Text(quicklink.name)
+                                .font(metrics.typography.rowTitle)
+                                .lineLimit(1)
+                            Text(quicklink.link)
+                                .font(metrics.typography.rowTrailing)
+                                .foregroundStyle(Theme.Colors.textTertiary)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                        }
+                        Spacer(minLength: metrics.spacing.lg)
+                        if !quicklink.showsInRootSearch {
+                            Image(systemName: "eye.slash")
+                                .font(.system(size: 10))
+                                .foregroundStyle(Theme.Colors.textTertiary)
+                        }
+                        if let keycaps = hotKeys.binding(for: .quicklink(id: quicklink.id))?.keycaps {
+                            HStack(spacing: metrics.spacing.xxs) {
+                                ForEach(Array(keycaps.enumerated()), id: \.offset) { _, cap in
+                                    KeyCapChip(text: cap, style: .outline)
+                                }
+                            }
+                        }
                     }
-                }
-            }
+                    .padding(.horizontal, metrics.spacing.md)
+                    .padding(.vertical, metrics.spacing.sm)
+                    .background(
+                        RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous)
+                            .fill(fill)
+                    )
+                    .armedHover($hovered)
         }
-        .padding(.horizontal, metrics.spacing.md)
-        .padding(.vertical, metrics.spacing.sm)
-        .background(
-            RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous)
-                .fill(fill)
-        )
-        .armedHover($hovered)
     }
 }
 
@@ -142,19 +147,21 @@ struct QuicklinkPreview: View {
     let quicklink: Quicklink?
 
     var body: some View {
-        if let quicklink {
-            VStack(alignment: .leading, spacing: 0) {
-                Spacer(minLength: 0)
-                SymbolImage(name: quicklink.symbol, size: Self.glyphSize)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, metrics.spacing.xl)
-                Spacer(minLength: 0)
-                QuicklinkInfoSection(quicklink: quicklink)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .padding(.horizontal, 12)
-        } else {
-            Color.clear
+        WithObservationTracking {
+            if let quicklink {
+                        VStack(alignment: .leading, spacing: 0) {
+                            Spacer(minLength: 0)
+                            SymbolImage(name: quicklink.symbol, size: Self.glyphSize)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, metrics.spacing.xl)
+                            Spacer(minLength: 0)
+                            QuicklinkInfoSection(quicklink: quicklink)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .padding(.horizontal, 12)
+                    } else {
+                        Color.clear
+                    }
         }
     }
 
@@ -216,24 +223,26 @@ private struct QuicklinkInfoSection: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: metrics.spacing.sm) {
-            Text("Information")
-                .font(metrics.typography.sectionHeader)
-                .foregroundStyle(.secondary)
-            VStack(spacing: 0) {
-                let rows = self.rows
-                ForEach(rows) { row in
-                    if row.id != rows.first?.id { Divider() }
-                    HStack(spacing: metrics.spacing.sm) {
-                        Text(row.label).foregroundStyle(.secondary)
-                        Spacer(minLength: metrics.spacing.lg)
-                        row.value.lineLimit(1).truncationMode(.middle)
+        WithObservationTracking {
+            VStack(alignment: .leading, spacing: metrics.spacing.sm) {
+                        Text("Information")
+                            .font(metrics.typography.sectionHeader)
+                            .foregroundStyle(.secondary)
+                        VStack(spacing: 0) {
+                            let rows = self.rows
+                            ForEach(rows) { row in
+                                if row.id != rows.first?.id { Divider() }
+                                HStack(spacing: metrics.spacing.sm) {
+                                    Text(row.label).foregroundStyle(.secondary)
+                                    Spacer(minLength: metrics.spacing.lg)
+                                    row.value.lineLimit(1).truncationMode(.middle)
+                                }
+                                .font(metrics.typography.keyCap)
+                                .padding(.vertical, metrics.spacing.xs)
+                            }
+                        }
                     }
-                    .font(metrics.typography.keyCap)
-                    .padding(.vertical, metrics.spacing.xs)
-                }
-            }
+                    .padding(.vertical, metrics.spacing.md)
         }
-        .padding(.vertical, metrics.spacing.md)
     }
 }

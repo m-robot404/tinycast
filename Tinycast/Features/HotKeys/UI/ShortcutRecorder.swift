@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 import SwiftUI
 
 /// Deliberately not a focusable control. See docs/features/hotkeys.md#recorder.
@@ -21,32 +22,34 @@ struct ShortcutRecorder: View {
     }
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: Theme.Radius.menu, style: .continuous)
-        // The width is kept either way, so a column of recorders stays aligned as they fill in.
-        let showsFill = !isQuiet || isRecording || hovered || hotKeys.binding(for: action) != nil
-        content
-            .padding(.horizontal, Theme.Spacing.sm + 1)
-            .frame(width: Theme.Size.shortcutRecorder, height: 24)
-            .background(shape.fill(Theme.Colors.cardFill).opacity(showsFill ? 1 : 0))
-            .background {
-                if isRecording { ShortcutRecorderHitRegion(capture: hotKeys.capture) }
-            }
-            .overlay(shape.strokeBorder(Theme.Colors.cardStroke, lineWidth: 1))
-            // An over-long binding truncates rather than resizing the field.
-            .clipShape(shape)
-            .contentShape(shape)
-            .onTapGesture { hotKeys.recordingAction = isRecording ? nil : action }
-            .onHover { hovered = $0 }
-            .anchorPreference(key: ShortcutRecorderAnchorKey.self, value: .bounds) {
-                isRecording ? $0 : nil
-            }
-            // Rows are lazy: a recording row scrolled away must release the session.
-            .onDisappear { if isRecording { hotKeys.recordingAction = nil } }
-            // A reused table row can hand this field another action while the old one records.
-            .onChange(of: action) { old, _ in
-                if hotKeys.recordingAction == old { hotKeys.recordingAction = nil }
-            }
-            .animation(.easeOut(duration: 0.12), value: hovered)
+        WithObservationTracking {
+            let shape = RoundedRectangle(cornerRadius: Theme.Radius.menu, style: .continuous)
+                    // The width is kept either way, so a column of recorders stays aligned as they fill in.
+                    let showsFill = !isQuiet || isRecording || hovered || hotKeys.binding(for: action) != nil
+                    content
+                        .padding(.horizontal, Theme.Spacing.sm + 1)
+                        .frame(width: Theme.Size.shortcutRecorder, height: 24)
+                        .background(shape.fill(Theme.Colors.cardFill).opacity(showsFill ? 1 : 0))
+                        .background {
+                            if isRecording { ShortcutRecorderHitRegion(capture: hotKeys.capture) }
+                        }
+                        .overlay(shape.strokeBorder(Theme.Colors.cardStroke, lineWidth: 1))
+                        // An over-long binding truncates rather than resizing the field.
+                        .clipShape(shape)
+                        .contentShape(shape)
+                        .onTapGesture { hotKeys.recordingAction = isRecording ? nil : action }
+                        .onHover { hovered = $0 }
+                        .anchorPreference(key: ShortcutRecorderAnchorKey.self, value: .bounds) {
+                            isRecording ? $0 : nil
+                        }
+                        // Rows are lazy: a recording row scrolled away must release the session.
+                        .onDisappear { if isRecording { hotKeys.recordingAction = nil } }
+                        // A reused table row can hand this field another action while the old one records.
+                        .onChange(of: action) { old, _ in
+                            if hotKeys.recordingAction == old { hotKeys.recordingAction = nil }
+                        }
+                        .animation(.easeOut(duration: 0.12), value: hovered)
+        }
     }
 
     @ViewBuilder

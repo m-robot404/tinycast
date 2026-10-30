@@ -1,24 +1,27 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct ApplicationsSettingsView: View {
     var body: some View {
-        Form {
-            LauncherCategorySwitchSection(
-                kind: .application, anchor: .applicationsApplications,
-                title: "Enable Applications")
+        WithObservationTracking {
+            Form {
+                        LauncherCategorySwitchSection(
+                            kind: .application, anchor: .applicationsApplications,
+                            title: "Enable Applications")
 
-            SearchScopesSection()
+                        SearchScopesSection()
 
-            LauncherItemsSection(
-                kind: .application,
-                anchor: .applicationsApplications,
-                searchPrompt: "Search applications…",
-                emptyMessage: LocalizedStringResource("applications-empty", defaultValue: "Nothing here yet.")
-            )
+                        LauncherItemsSection(
+                            kind: .application,
+                            anchor: .applicationsApplications,
+                            searchPrompt: "Search applications…",
+                            emptyMessage: LocalizedStringResource("applications-empty", defaultValue: "Nothing here yet.")
+                        )
+                    }
+                    .formStyle(.grouped)
+                    .settingsScrollTarget(.applications)
+                    .releasesFocusOnOutsideClick()
         }
-        .formStyle(.grouped)
-        .settingsScrollTarget(.applications)
-        .releasesFocusOnOutsideClick()
     }
 
 }

@@ -1,9 +1,10 @@
 import AppKit
+import ObservationPolyfill
 import SwiftUI
 
 struct FormTextArea: NSViewRepresentable {
     @Binding var text: String
-    @Binding var selection: TextSelection?
+    @Binding var selection: NSRange?
     @Binding var focused: Bool
     var minimumHeight: CGFloat
     let label: String
@@ -75,8 +76,10 @@ struct FormTextArea: NSViewRepresentable {
                 }
                 view.breakUndoCoalescing()
             }
-            if let selection, case .selection(let range) = selection.indices {
-                view.setSelectedRange(NSRange(range, in: text))
+            if let selection, selection.location != NSNotFound,
+                NSMaxRange(selection) <= (text as NSString).length
+            {
+                view.setSelectedRange(selection)
             } else {
                 view.setSelectedRange(NSRange(location: (text as NSString).length, length: 0))
             }
@@ -178,8 +181,11 @@ struct FormTextArea: NSViewRepresentable {
         }
 
         private func updateSelection(_ view: NSTextView) {
-            guard let range = Range(view.selectedRange(), in: input.text) else { return }
-            input.selection = TextSelection(range: range)
+            let range = view.selectedRange()
+            guard range.location != NSNotFound,
+                NSMaxRange(range) <= (input.text as NSString).length
+            else { return }
+            input.selection = range
         }
 
         func textView(_ textView: NSTextView, doCommandBy commandSelector: Selector) -> Bool {

@@ -1,14 +1,17 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct CalendarBar: View {
     @Environment(\.metrics) private var metrics
     let color: MeetingEvent.CalendarColor?
 
     var body: some View {
-        Capsule()
-            .fill(color?.color ?? .clear)
-            .frame(width: metrics.size.calendarBarWidth, height: metrics.size.calendarBarHeight)
-            .accessibilityHidden(true)
+        WithObservationTracking {
+            Capsule()
+                        .fill(color?.color ?? .clear)
+                        .frame(width: metrics.size.calendarBarWidth, height: metrics.size.calendarBarHeight)
+                        .accessibilityHidden(true)
+        }
     }
 }
 
@@ -19,27 +22,29 @@ struct MeetingTiming: View {
     let now: Date
 
     var body: some View {
-        let pill = UpcomingWindow.rowPill(for: meeting, now: now, calendar: .current, locale: .current)
-        HStack(spacing: metrics.spacing.md) {
-            Text(MeetingTimeFormat.range(of: meeting))
-                .font(metrics.typography.rowTrailing)
-                .foregroundStyle(meeting.isInProgress(now: now) ? .primary : .secondary)
-            ZStack {
-                Text(UpcomingWindow.countdown(to: now + 60 * 60, now: now, locale: .current)).hidden()
-                Text(UpcomingWindow.dayLabel(now + 24 * 60 * 60, calendar: .current)).hidden()
-                Text(pill?.text ?? "")
-                    .foregroundStyle(pill?.isImminent == true ? .primary : .secondary)
-            }
-            .font(metrics.typography.rowTrailing.weight(.medium))
-            .padding(.horizontal, metrics.spacing.sm)
-            .padding(.vertical, metrics.spacing.xxs)
-            .background(
-                RoundedRectangle(cornerRadius: metrics.radius.keyCap, style: .continuous)
-                    .fill(pill == nil ? .clear : Theme.Colors.controlSurface))
+        WithObservationTracking {
+            let pill = UpcomingWindow.rowPill(for: meeting, now: now, calendar: .current, locale: .current)
+                    HStack(spacing: metrics.spacing.md) {
+                        Text(MeetingTimeFormat.range(of: meeting))
+                            .font(metrics.typography.rowTrailing)
+                            .foregroundStyle(meeting.isInProgress(now: now) ? .primary : .secondary)
+                        ZStack {
+                            Text(UpcomingWindow.countdown(to: now + 60 * 60, now: now, locale: .current)).hidden()
+                            Text(UpcomingWindow.dayLabel(now + 24 * 60 * 60, calendar: .current)).hidden()
+                            Text(pill?.text ?? "")
+                                .foregroundStyle(pill?.isImminent == true ? .primary : .secondary)
+                        }
+                        .font(metrics.typography.rowTrailing.weight(.medium))
+                        .padding(.horizontal, metrics.spacing.sm)
+                        .padding(.vertical, metrics.spacing.xxs)
+                        .background(
+                            RoundedRectangle(cornerRadius: metrics.radius.keyCap, style: .continuous)
+                                .fill(pill == nil ? .clear : Theme.Colors.controlSurface))
+                    }
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .fixedSize()
         }
-        .monospacedDigit()
-        .lineLimit(1)
-        .fixedSize()
     }
 }
 
@@ -51,8 +56,10 @@ struct MeetingEntryContent<Content: View>: View {
     @ViewBuilder let content: (MeetingEvent, Date) -> Content
 
     var body: some View {
-        if let id = MeetingEvent.id(fromEntryID: entryID), let meeting = store.event(id: id) {
-            content(meeting, clock.now)
+        WithObservationTracking {
+            if let id = MeetingEvent.id(fromEntryID: entryID), let meeting = store.event(id: id) {
+                        content(meeting, clock.now)
+                    }
         }
     }
 }

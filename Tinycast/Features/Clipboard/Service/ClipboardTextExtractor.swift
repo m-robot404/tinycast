@@ -72,16 +72,21 @@ nonisolated enum ClipboardTextExtractor {
         _ strip: CGImage, keepingCentresIn rows: Range<Double>
     ) async throws -> String {
         try Task.checkCancellation()
-        var request = RecognizeTextRequest()
+
+        // VNRecognizeTextRequest is supported on Ventura. The newer Swift Vision
+        // RecognizeTextRequest API requires macOS 15 and cannot be used by this helper.
+        let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
-        request.minimumTextHeightFraction = 0
-        request.automaticallyDetectsLanguage = true
-        let observations = try await request.perform(on: strip)
+        request.usesLanguageCorrection = true
+        try VNImageRequestHandler(cgImage: strip, options: [:]).perform([request])
         try Task.checkCancellation()
-        let size = CGSize(width: strip.width, height: strip.height)
+
         return
-            observations
-            .filter { rows.contains($0.boundingBox.toImageCoordinates(size, origin: .upperLeft).midY) }
+            (request.results ?? [])
+            .filter {
+                let midY = Double((1 - $0.boundingBox.midY) * CGFloat(strip.height))
+                return rows.contains(midY)
+            }
             .compactMap { $0.topCandidates(1).first?.string }
             .joined(separator: "\n")
     }

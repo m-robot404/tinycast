@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct MeetingDetailsView: View {
     @Environment(\.metrics) private var metrics
@@ -6,41 +7,43 @@ struct MeetingDetailsView: View {
     let details: MeetingDetails
 
     var body: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: metrics.spacing.md) {
-                header
-                if let location = details.location {
-                    HStack(alignment: .firstTextBaseline, spacing: metrics.spacing.sm) {
-                        Image(systemName: "mappin.and.ellipse")
-                            .foregroundStyle(Theme.Colors.textSecondary)
-                        Text(location)
+        WithObservationTracking {
+            ScrollView {
+                        LazyVStack(alignment: .leading, spacing: metrics.spacing.md) {
+                            header
+                            if let location = details.location {
+                                HStack(alignment: .firstTextBaseline, spacing: metrics.spacing.sm) {
+                                    Image(systemName: "mappin.and.ellipse")
+                                        .foregroundStyle(Theme.Colors.textSecondary)
+                                    Text(location)
+                                }
+                                .font(metrics.typography.rowTitle)
+                                .padding(.top, metrics.spacing.xl)
+                            }
+                            if !details.attendees.isEmpty {
+                                sectionHeader(String(localized: "Attendees"))
+                                ForEach(details.attendees.indices, id: \.self) { index in
+                                    AttendeeRow(attendee: details.attendees[index])
+                                }
+                            }
+                            if let notes = details.notes {
+                                sectionHeader(String(localized: "Description"))
+                                Text(notes)
+                                    .font(metrics.typography.rowTitle)
+                                    .foregroundStyle(Theme.Colors.textSecondary)
+                            }
+                        }
+                        .textSelection(.enabled)
+                        .padding(.horizontal, metrics.spacing.xxl)
+                        .padding(.top, metrics.spacing.md)
+                        .padding(.bottom, metrics.spacing.xxl)
+                        .hideNativeScrollers()
                     }
-                    .font(metrics.typography.rowTitle)
-                    .padding(.top, metrics.spacing.xl)
-                }
-                if !details.attendees.isEmpty {
-                    sectionHeader(String(localized: "Attendees"))
-                    ForEach(details.attendees.indices, id: \.self) { index in
-                        AttendeeRow(attendee: details.attendees[index])
-                    }
-                }
-                if let notes = details.notes {
-                    sectionHeader(String(localized: "Description"))
-                    Text(notes)
-                        .font(metrics.typography.rowTitle)
-                        .foregroundStyle(Theme.Colors.textSecondary)
-                }
-            }
-            .textSelection(.enabled)
-            .padding(.horizontal, metrics.spacing.xxl)
-            .padding(.top, metrics.spacing.md)
-            .padding(.bottom, metrics.spacing.xxl)
-            .hideNativeScrollers()
+                    .edgeDissolve()
+                    .thinScrollbar()
+                    // A different meeting starts at its title, not wherever the last one was scrolled to.
+                    .id(meeting.id)
         }
-        .edgeDissolve()
-        .thinScrollbar()
-        // A different meeting starts at its title, not wherever the last one was scrolled to.
-        .id(meeting.id)
     }
 
     private var header: some View {
@@ -86,23 +89,25 @@ private struct AttendeeRow: View {
     let attendee: MeetingDetails.Attendee
 
     var body: some View {
-        HStack(spacing: metrics.spacing.sm) {
-            Image(systemName: attendee.response.symbol)
-                .foregroundStyle(attendee.response.tint)
-            Text(attendee.name)
-                .lineLimit(1)
-            if attendee.isOrganizer {
-                Text("Organizer")
-                    .font(metrics.typography.rowTrailing)
-                    .foregroundStyle(Theme.Colors.textTertiary)
-            }
-            Spacer(minLength: metrics.spacing.md)
-            Text(attendee.response.label)
-                .font(metrics.typography.rowTrailing)
-                .foregroundStyle(Theme.Colors.textSecondary)
+        WithObservationTracking {
+            HStack(spacing: metrics.spacing.sm) {
+                        Image(systemName: attendee.response.symbol)
+                            .foregroundStyle(attendee.response.tint)
+                        Text(attendee.name)
+                            .lineLimit(1)
+                        if attendee.isOrganizer {
+                            Text("Organizer")
+                                .font(metrics.typography.rowTrailing)
+                                .foregroundStyle(Theme.Colors.textTertiary)
+                        }
+                        Spacer(minLength: metrics.spacing.md)
+                        Text(attendee.response.label)
+                            .font(metrics.typography.rowTrailing)
+                            .foregroundStyle(Theme.Colors.textSecondary)
+                    }
+                    .font(metrics.typography.rowTitle)
+                    .accessibilityElement(children: .combine)
         }
-        .font(metrics.typography.rowTitle)
-        .accessibilityElement(children: .combine)
     }
 }
 

@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct ExtensionCommandView: View {
     let screen: ExtensionScreen
@@ -12,8 +13,10 @@ struct ExtensionCommandView: View {
     let onFieldChange: (RenderNode, Any) -> Void
 
     var body: some View {
-        content
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        WithObservationTracking {
+            content
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
     }
 
     @ViewBuilder
@@ -73,27 +76,29 @@ struct ExtensionFailureView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: metrics.spacing.md) {
-                HStack(spacing: metrics.spacing.sm) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
-                    Text(headline)
-                        .font(metrics.typography.rowTitle)
-                        .textSelection(.enabled)
-                }
-                if let detail {
-                    Text(detail)
-                        .font(.system(.caption, design: .monospaced))
-                        .foregroundStyle(.secondary)
-                        .textSelection(.enabled)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(metrics.spacing.lg)
-            .hideNativeScrollers()
+        WithObservationTracking {
+            ScrollView {
+                        VStack(alignment: .leading, spacing: metrics.spacing.md) {
+                            HStack(spacing: metrics.spacing.sm) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .foregroundStyle(.orange)
+                                Text(headline)
+                                    .font(metrics.typography.rowTitle)
+                                    .textSelection(.enabled)
+                            }
+                            if let detail {
+                                Text(detail)
+                                    .font(.system(.caption, design: .monospaced))
+                                    .foregroundStyle(.secondary)
+                                    .textSelection(.enabled)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(metrics.spacing.lg)
+                        .hideNativeScrollers()
+                    }
+                    .thinScrollbar()
         }
-        .thinScrollbar()
     }
 }
 
@@ -119,59 +124,61 @@ struct ExtensionToastPill: View {
     }
 
     var body: some View {
-        HStack(spacing: 0) {
-            mark.frame(width: metrics.size.menuButton, height: metrics.size.menuButton)
-            HStack(spacing: metrics.spacing.md) {
-                Text(toast.title).foregroundStyle(Theme.Colors.textPrimary).layoutPriority(1)
-                if let message = toast.message, !message.isEmpty {
-                    Text(message).foregroundStyle(Theme.Colors.textSecondary)
-                }
-                if toast.style == .failure {
-                    divider
-                    button {
-                        Paster.copyPlainText(
-                            [toast.title, toast.message].compactMap(\.self).joined(separator: "\n"))
-                        copiedAt = Date()
-                    } label: {
-                        // The wider word holds the width, so the pill never twitches on copy.
-                        ZStack {
-                            Text("Copied").hidden()
-                            Text(copiedAt == nil ? "Copy" : "Copied")
+        WithObservationTracking {
+            HStack(spacing: 0) {
+                        mark.frame(width: metrics.size.menuButton, height: metrics.size.menuButton)
+                        HStack(spacing: metrics.spacing.md) {
+                            Text(toast.title).foregroundStyle(Theme.Colors.textPrimary).layoutPriority(1)
+                            if let message = toast.message, !message.isEmpty {
+                                Text(message).foregroundStyle(Theme.Colors.textSecondary)
+                            }
+                            if toast.style == .failure {
+                                divider
+                                button {
+                                    Paster.copyPlainText(
+                                        [toast.title, toast.message].compactMap(\.self).joined(separator: "\n"))
+                                    copiedAt = Date()
+                                } label: {
+                                    // The wider word holds the width, so the pill never twitches on copy.
+                                    ZStack {
+                                        Text("Copied").hidden()
+                                        Text(copiedAt == nil ? "Copy" : "Copied")
+                                    }
+                                }
+                            } else if let action = toast.primaryAction {
+                                divider
+                                button {
+                                    onAction(action.token)
+                                } label: {
+                                    Text(action.title)
+                                }
+                            }
                         }
+                        .font(metrics.typography.bar)
+                        .lineLimit(1)
+                        .padding(.trailing, metrics.spacing.xl)
                     }
-                } else if let action = toast.primaryAction {
-                    divider
-                    button {
-                        onAction(action.token)
-                    } label: {
-                        Text(action.title)
+                    .frame(height: metrics.size.menuButton)
+                    .background { glow }
+                    .overlay {
+                        Capsule().strokeBorder(
+                            LinearGradient(
+                                colors: [tint.opacity(Self.rimOpacity), tint.opacity(0.06), .clear],
+                                startPoint: .leading, endPoint: .trailing),
+                            lineWidth: Theme.Size.hairline)
                     }
-                }
-            }
-            .font(metrics.typography.bar)
-            .lineLimit(1)
-            .padding(.trailing, metrics.spacing.xl)
-        }
-        .frame(height: metrics.size.menuButton)
-        .background { glow }
-        .overlay {
-            Capsule().strokeBorder(
-                LinearGradient(
-                    colors: [tint.opacity(Self.rimOpacity), tint.opacity(0.06), .clear],
-                    startPoint: .leading, endPoint: .trailing),
-                lineWidth: Theme.Size.hairline)
-        }
-        .frosted(in: Capsule())
-        .contentShape(Capsule())
-        .onTapGesture(perform: onDismiss)
-        .onHover { isHovered in
-            withAnimation(.easeOut(duration: Theme.Duration.hover)) { hovered = isHovered }
-        }
-        .accessibilityAction(named: "Dismiss", onDismiss)
-        .task(id: copiedAt) {
-            guard copiedAt != nil else { return }
-            try? await Task.sleep(for: .seconds(Theme.Duration.copyFeedback))
-            copiedAt = nil
+                    .frosted(in: Capsule())
+                    .contentShape(Capsule())
+                    .onTapGesture(perform: onDismiss)
+                    .onHover { isHovered in
+                        withAnimation(.easeOut(duration: Theme.Duration.hover)) { hovered = isHovered }
+                    }
+                    .accessibilityAction(named: "Dismiss", onDismiss)
+                    .task(id: copiedAt) {
+                        guard copiedAt != nil else { return }
+                        try? await Task.sleep(for: .seconds(Theme.Duration.copyFeedback))
+                        copiedAt = nil
+                    }
         }
     }
 

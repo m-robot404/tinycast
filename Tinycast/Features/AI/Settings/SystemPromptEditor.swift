@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 /// Blurred once it has content, so opening Settings on a stream cannot spill it; empty opens plain.
 struct SystemPromptEditor: View {
@@ -16,33 +17,35 @@ struct SystemPromptEditor: View {
     private var isEditable: Bool { isEnabled && isRevealed }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            HStack(spacing: Theme.Spacing.sm) {
-                Text(text.isBlank ? "Nothing added" : "Added to every message")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Spacer(minLength: Theme.Spacing.lg)
-                Button {
-                    withAnimation(.easeOut(duration: Theme.Duration.enter)) { isRevealed.toggle() }
-                } label: {
-                    Image(systemName: isRevealed ? "eye.slash" : "eye")
-                }
-                .buttonStyle(.plain)
-                .help(isRevealed ? "Hide the prompt" : "Show the prompt")
-                .disabled(text.isBlank)
-                .accessibilityLabel(isRevealed ? "Hide the system prompt" : "Show the system prompt")
-            }
-            prompt
-                .padding(Theme.Spacing.sm)
-                .frame(height: Theme.Size.editorTextHeight)
-                .background(
-                    RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
-                        .fill(Theme.Colors.cardFill)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
-                        .strokeBorder(Theme.Colors.cardStroke, lineWidth: 1)
-                )
+        WithObservationTracking {
+            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                        HStack(spacing: Theme.Spacing.sm) {
+                            Text(text.isBlank ? "Nothing added" : "Added to every message")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Spacer(minLength: Theme.Spacing.lg)
+                            Button {
+                                withAnimation(.easeOut(duration: Theme.Duration.enter)) { isRevealed.toggle() }
+                            } label: {
+                                Image(systemName: isRevealed ? "eye.slash" : "eye")
+                            }
+                            .buttonStyle(.plain)
+                            .help(isRevealed ? "Hide the prompt" : "Show the prompt")
+                            .disabled(text.isBlank)
+                            .accessibilityLabel(isRevealed ? "Hide the system prompt" : "Show the system prompt")
+                        }
+                        prompt
+                            .padding(Theme.Spacing.sm)
+                            .frame(height: Theme.Size.editorTextHeight)
+                            .background(
+                                RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
+                                    .fill(Theme.Colors.cardFill)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
+                                    .strokeBorder(Theme.Colors.cardStroke, lineWidth: 1)
+                            )
+                    }
         }
     }
 

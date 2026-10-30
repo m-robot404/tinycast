@@ -1,4 +1,5 @@
 import Foundation
+import ObservationPolyfill
 
 /// The layout library. Authored data, so a bad record is cleaned rather than discarded.
 @MainActor

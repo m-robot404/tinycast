@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 /// AppKit resolves the named base symbol directly, without inheriting a button variant.
 private struct HeaderMenuSymbol: View {
@@ -7,15 +8,17 @@ private struct HeaderMenuSymbol: View {
     @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        let configuration = NSImage.SymbolConfiguration(pointSize: size, weight: .medium)
-        if let image = NSImage(
-            systemSymbolName: SystemSymbolName.resolve(name, isDark: colorScheme == .dark),
-            accessibilityDescription: nil
-        )?
-        .withSymbolConfiguration(configuration) {
-            Image(nsImage: image)
-                .renderingMode(.template)
-                .frame(width: size, height: size)
+        WithObservationTracking {
+            let configuration = NSImage.SymbolConfiguration(pointSize: size, weight: .medium)
+                    if let image = NSImage(
+                        systemSymbolName: SystemSymbolName.resolve(name, isDark: colorScheme == .dark),
+                        accessibilityDescription: nil
+                    )?
+                    .withSymbolConfiguration(configuration) {
+                        Image(nsImage: image)
+                            .renderingMode(.template)
+                            .frame(width: size, height: size)
+                    }
         }
     }
 }
@@ -48,16 +51,18 @@ struct BarButton<Label: View>: View {
     @Environment(\.metrics) private var metrics
 
     var body: some View {
-        let shape = chrome.shape(metrics)
-        return Button(action: action) {
-            label
-                .padding(.horizontal, isCompact ? metrics.spacing.sm : metrics.spacing.md)
-                .frame(height: metrics.size.barButtonHeight)
-                .contentShape(shape)
-                .background(shape.fill(fill))
+        WithObservationTracking {
+            let shape = chrome.shape(metrics)
+                    Button(action: action) {
+                        label
+                            .padding(.horizontal, isCompact ? metrics.spacing.sm : metrics.spacing.md)
+                            .frame(height: metrics.size.barButtonHeight)
+                            .contentShape(shape)
+                            .background(shape.fill(fill))
+                    }
+                    .buttonStyle(.plain)
+                    .onHover { hovered = $0 }
         }
-        .buttonStyle(.plain)
-        .onHover { hovered = $0 }
     }
 
     private var fill: Color {
@@ -99,35 +104,37 @@ struct HeaderMenuButton: View {
     }
 
     var body: some View {
-        BarButton(chrome: .rounded, action: action) {
-            HStack(spacing: metrics.spacing.sm) {
-                switch icon {
-                case .blank:
-                    EmptyView()
-                case .symbol(let name):
-                    HeaderMenuSymbol(name: name, size: metrics.scaled(symbolSize))
-                case .asset(let name):
-                    Image(name)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: metrics.size.barBrandIcon, height: metrics.size.barBrandIcon)
-                case .file(let path):
-                    MenuFileIcon(path: path)
-                case .thumbnail(let id, let data):
-                    MenuThumbnail(id: id, data: data)
-                }
-                Text(title)
-                    .font(metrics.typography.bar)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                // One glyph rotates rather than swapping, so opening the menu can't shift layout.
-                Image(systemName: "chevron.down")
-                    .font(metrics.typography.disclosure)
-                    .rotationEffect(.degrees(isOpen ? 180 : 0))
-                    .animation(reduceMotion ? nil : Theme.MenuMotion.chevronAnimation, value: isOpen)
-            }
-            .foregroundStyle(Theme.Colors.textSecondary)
+        WithObservationTracking {
+            BarButton(chrome: .rounded, action: action) {
+                        HStack(spacing: metrics.spacing.sm) {
+                            switch icon {
+                            case .blank:
+                                EmptyView()
+                            case .symbol(let name):
+                                HeaderMenuSymbol(name: name, size: metrics.scaled(symbolSize))
+                            case .asset(let name):
+                                Image(name)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(width: metrics.size.barBrandIcon, height: metrics.size.barBrandIcon)
+                            case .file(let path):
+                                MenuFileIcon(path: path)
+                            case .thumbnail(let id, let data):
+                                MenuThumbnail(id: id, data: data)
+                            }
+                            Text(title)
+                                .font(metrics.typography.bar)
+                                .lineLimit(1)
+                                .truncationMode(.middle)
+                            // One glyph rotates rather than swapping, so opening the menu can't shift layout.
+                            Image(systemName: "chevron.down")
+                                .font(metrics.typography.disclosure)
+                                .rotationEffect(.degrees(isOpen ? 180 : 0))
+                                .animation(reduceMotion ? nil : Theme.MenuMotion.chevronAnimation, value: isOpen)
+                        }
+                        .foregroundStyle(Theme.Colors.textSecondary)
+                    }
+                    .help(help)
         }
-        .help(help)
     }
 }

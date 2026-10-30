@@ -4,6 +4,13 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.." || exit 1
 export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
+
+if ! command -v xcodegen >/dev/null 2>&1; then
+    echo "✗ XcodeGen is required to regenerate the project from project.yml." >&2
+    exit 1
+fi
+xcodegen generate
+
 IDENTITY="Tinycast Self-Signed"
 DERIVED="build/DerivedData"
 

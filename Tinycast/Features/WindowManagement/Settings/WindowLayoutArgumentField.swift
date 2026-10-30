@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 import SwiftUI
 
 /// The Argument row: none, a file, a folder, a URL, or one of the user's quicklinks.
@@ -11,19 +12,21 @@ struct WindowLayoutArgumentField: View {
     @FocusState private var isURLFocused: Bool
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            Text("Argument")
-                .font(.callout.weight(.medium))
-            menu
-            if isEditingURL {
-                TextField("https://example.com", text: $urlText)
-                    .textFieldStyle(.plain)
-                    .focused($isURLFocused)
-                    .focusEffectDisabled()
-                    .layoutFieldChrome(isFocused: isURLFocused)
-                    // Live for the same reason the number fields are: ⌘↵ never blurs this field.
-                    .onChange(of: urlText) { _, typed in draft.setArgument(typed) }
-            }
+        WithObservationTracking {
+            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                        Text("Argument")
+                            .font(.callout.weight(.medium))
+                        menu
+                        if isEditingURL {
+                            TextField("https://example.com", text: $urlText)
+                                .textFieldStyle(.plain)
+                                .focused($isURLFocused)
+                                .focusEffectDisabled()
+                                .layoutFieldChrome(isFocused: isURLFocused)
+                                // Live for the same reason the number fields are: ⌘↵ never blurs this field.
+                                .onChange(of: urlText) { _, typed in draft.setArgument(typed) }
+                        }
+                    }
         }
     }
 

@@ -19,8 +19,15 @@ final class CameraSession {
 
     /// Every camera the Mac offers right now, in the order `switchToNextDevice` cycles them.
     static var devices: [AVCaptureDevice] {
-        AVCaptureDevice.DiscoverySession(
-            deviceTypes: [.builtInWideAngleCamera, .external, .continuityCamera],
+        let deviceTypes: [AVCaptureDevice.DeviceType]
+        if #available(macOS 14.0, *) {
+            deviceTypes = [.builtInWideAngleCamera, .external, .continuityCamera]
+        } else {
+            // Ventura exposes external cameras, including Continuity Camera, as externalUnknown.
+            deviceTypes = [.builtInWideAngleCamera, .externalUnknown]
+        }
+        return AVCaptureDevice.DiscoverySession(
+            deviceTypes: deviceTypes,
             mediaType: .video, position: .unspecified
         ).devices
     }

@@ -1,7 +1,15 @@
 import SwiftUI
+import ObservationPolyfill
+
+private struct IconMenuFramePreferenceKey: PreferenceKey {
+    static var defaultValue = CGRect.zero
+    static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
+        value = nextValue()
+    }
+}
 
 struct CustomCommandEditorView: View {
-    @Bindable var editor: CustomCommandEditorSession
+    @ObservationPolyfill.Bindable var editor: CustomCommandEditorSession
     let openMenuCorner: MenuPanelCorner?
     let openInputMenu: (PopoverMenuContent, MenuPanelCorner, Int) -> Void
 
@@ -19,94 +27,94 @@ struct CustomCommandEditorView: View {
     }
 
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                VStack(spacing: metrics.spacing.xxl) {
-                    FormRow("Name & Icon") { nameField }.id(CustomCommandEditorSession.Field.name)
-                    FormRow("Command", alignment: .top) {
-                        VStack(alignment: .leading, spacing: metrics.spacing.md) {
-                            FormTextArea(
-                                text: $editor.shellCommand, selection: $editor.selection,
-                                focused: focusBinding(.command), minimumHeight: metrics.size.textAreaUnit * 2,
-                                label: String(localized: "Shell command"), isCode: true,
-                                moveFocus: editor.advanceFocus
-                            )
-                            .formFieldChrome(focused: focusedField == .command)
-                            detail(String(localized: "Example: /usr/bin/pmset displaysleepnow"))
-                        }
-                    }
-                    .id(CustomCommandEditorSession.Field.command)
-                    FormRow("Run In", alignment: .top) { workingDirectoryField }
-                        .id(CustomCommandEditorSession.Field.workingDirectory)
-                    FormRow(
-                        "Arguments", alignment: .top,
-                        labelInset: editor.arguments.isEmpty ? 0 : metrics.spacing.lg
-                    ) { argumentsSection }
-                    FormRow {
-                        VStack(alignment: .leading, spacing: metrics.spacing.lg) {
-                            option(
-                                String(localized: "Show in root search"),
-                                detail: String(
-                                    localized: """
-                                        List this command alongside apps and other commands.
-                                        """),
-                                value: $editor.showsInRootSearch, focus: .rootSearch)
-                            option(
-                                String(localized: "Load shell environment"),
-                                detail: String(
-                                    localized: """
-                                        Sources ~/.zshrc for aliases, functions and PATH. Slower to start.
-                                        """),
-                                value: $editor.loadsShellEnvironment, focus: .shellEnvironment)
-                            option(
-                                String(localized: "Needs confirmation"),
-                                detail: String(localized: "Ask before running this command."),
-                                value: $editor.requiresConfirmation, focus: .confirmation)
-                            option(
-                                String(localized: "Show confirmation"),
-                                detail: String(localized: "Confirm on screen after the command succeeds."),
-                                value: $editor.showsConfirmation, focus: .successConfirmation)
-                            option(
-                                String(localized: "Show output"),
-                                detail: String(
-                                    localized: """
-                                        Open a window with everything the command prints.
-                                        """),
-                                value: $editor.showsOutput, focus: .output)
-                            if let errorMessage = editor.errorMessage {
-                                detail(errorMessage).foregroundStyle(.orange)
+        WithObservationTracking {
+            ScrollViewReader { proxy in
+                        ScrollView {
+                            VStack(spacing: metrics.spacing.xxl) {
+                                FormRow("Name & Icon") { nameField }.id(CustomCommandEditorSession.Field.name)
+                                FormRow("Command", alignment: .top) {
+                                    VStack(alignment: .leading, spacing: metrics.spacing.md) {
+                                        FormTextArea(
+                                            text: $editor.shellCommand, selection: $editor.selection,
+                                            focused: focusBinding(.command), minimumHeight: metrics.size.textAreaUnit * 2,
+                                            label: String(localized: "Shell command"), isCode: true,
+                                            moveFocus: editor.advanceFocus
+                                        )
+                                        .formFieldChrome(focused: focusedField == .command)
+                                        detail(String(localized: "Example: /usr/bin/pmset displaysleepnow"))
+                                    }
+                                }
+                                .id(CustomCommandEditorSession.Field.command)
+                                FormRow("Run In", alignment: .top) { workingDirectoryField }
+                                    .id(CustomCommandEditorSession.Field.workingDirectory)
+                                FormRow(
+                                    "Arguments", alignment: .top,
+                                    labelInset: editor.arguments.isEmpty ? 0 : metrics.spacing.lg
+                                ) { argumentsSection }
+                                FormRow {
+                                    VStack(alignment: .leading, spacing: metrics.spacing.lg) {
+                                        option(
+                                            String(localized: "Show in root search"),
+                                            detail: String(
+                                                localized: """
+                                                    List this command alongside apps and other commands.
+                                                    """),
+                                            value: $editor.showsInRootSearch, focus: .rootSearch)
+                                        option(
+                                            String(localized: "Load shell environment"),
+                                            detail: String(
+                                                localized: """
+                                                    Sources ~/.zshrc for aliases, functions and PATH. Slower to start.
+                                                    """),
+                                            value: $editor.loadsShellEnvironment, focus: .shellEnvironment)
+                                        option(
+                                            String(localized: "Needs confirmation"),
+                                            detail: String(localized: "Ask before running this command."),
+                                            value: $editor.requiresConfirmation, focus: .confirmation)
+                                        option(
+                                            String(localized: "Show confirmation"),
+                                            detail: String(localized: "Confirm on screen after the command succeeds."),
+                                            value: $editor.showsConfirmation, focus: .successConfirmation)
+                                        option(
+                                            String(localized: "Show output"),
+                                            detail: String(
+                                                localized: """
+                                                    Open a window with everything the command prints.
+                                                    """),
+                                            value: $editor.showsOutput, focus: .output)
+                                        if let errorMessage = editor.errorMessage {
+                                            detail(errorMessage).foregroundStyle(.orange)
+                                        }
+                                    }
+                                }
                             }
+                            .font(metrics.typography.rowTitle)
+                            .foregroundStyle(Theme.Colors.textPrimary)
+                            .padding(.horizontal, metrics.spacing.xxxl * 2)
+                            .padding(.vertical, metrics.spacing.md)
+                        }
+                        .edgeDissolve()
+                        .task(id: FocusRequest(field: editor.focusedField, token: palette.focusToken)) {
+                            palette.noteEditingField(true)
+                            let field = editor.focusedField
+                            focusedControl = isTextField(field) ? nil : field
+                            await Task.yield()
+                            guard !Task.isCancelled else { return }
+                            proxy.scrollTo(scrollTarget(for: field))
+                            focusedField = field
+                        }
+                        .onChange(of: focusedField) { field in
+                            if let field, editor.focusedField != field { editor.focusedField = field }
+                            focusedControl = field.flatMap { isTextField($0) ? nil : $0 }
+                        }
+                        .onChange(of: focusedControl) { field in
+                            if let field { focusedField = field }
+                        }
+                        .onDisappear {
+                            coordinator.editorDidClose(editor)
+                            palette.noteEditingField(false)
                         }
                     }
-                }
-                .font(metrics.typography.rowTitle)
-                .foregroundStyle(Theme.Colors.textPrimary)
-                .padding(.horizontal, metrics.spacing.xxxl * 2)
-                .padding(.vertical, metrics.spacing.md)
-            }
-            .scrollClipDisabled()
-            .edgeDissolve()
-            .focusEffectDisabled()
-            .task(id: FocusRequest(field: editor.focusedField, token: palette.focusToken)) {
-                palette.noteEditingField(true)
-                let field = editor.focusedField
-                focusedControl = isTextField(field) ? nil : field
-                await Task.yield()
-                guard !Task.isCancelled else { return }
-                proxy.scrollTo(scrollTarget(for: field))
-                focusedField = field
-            }
-            .onChange(of: focusedField) { _, field in
-                if let field, editor.focusedField != field { editor.focusedField = field }
-                focusedControl = field.flatMap { isTextField($0) ? nil : $0 }
-            }
-            .onChange(of: focusedControl) { _, field in
-                if let field { focusedField = field }
-            }
-            .onDisappear {
-                coordinator.editorDidClose(editor)
-                palette.noteEditingField(false)
-            }
         }
     }
 
@@ -141,32 +149,32 @@ struct CustomCommandEditorView: View {
 
     private var iconMenu: some View {
         let isOpen = openMenuCorner == .belowControl(iconMenuFrame)
-        return HStack(spacing: metrics.spacing.sm) {
-            SymbolImage(
-                name: editor.iconSymbol ?? CustomCommand.sfSymbol,
-                size: metrics.scaled(Theme.Typography.menuSymbolSize))
-            Image(systemName: "chevron.down")
-                .font(metrics.typography.disclosure)
-                .foregroundStyle(Theme.Colors.textSecondary)
-                .rotationEffect(.degrees(isOpen ? 180 : 0))
-                .animation(reduceMotion ? nil : Theme.MenuMotion.chevronAnimation, value: isOpen)
+        return Button(action: showIconMenu) {
+            HStack(spacing: metrics.spacing.sm) {
+                SymbolImage(
+                    name: editor.iconSymbol ?? CustomCommand.sfSymbol,
+                    size: metrics.scaled(Theme.Typography.menuSymbolSize))
+                Image(systemName: "chevron.down")
+                    .font(metrics.typography.disclosure)
+                    .foregroundStyle(Theme.Colors.textSecondary)
+                    .rotationEffect(.degrees(isOpen ? 180 : 0))
+                    .animation(reduceMotion ? nil : Theme.MenuMotion.chevronAnimation, value: isOpen)
+            }
+            .padding(.horizontal, metrics.spacing.xl)
+            .frame(height: metrics.size.dialogButtonHeight)
+            .contentShape(.rect)
         }
-        .padding(.horizontal, metrics.spacing.xl)
-        .frame(height: metrics.size.dialogButtonHeight)
-        .contentShape(.rect)
-        .onTapGesture(perform: showIconMenu)
+        .buttonStyle(.plain)
         .fixedSize()
-        .focusable()
         .focused($focusedControl, equals: .icon)
-        .onKeyPress(keys: [.return, .space]) { _ in
-            showIconMenu()
-            return .handled
-        }
-        .onGeometryChange(for: CGRect.self) {
-            $0.frame(in: .global)
-        } action: {
-            iconMenuFrame = $0
-        }
+        .background(
+            GeometryReader { proxy in
+                Color.clear.preference(
+                    key: IconMenuFramePreferenceKey.self,
+                    value: proxy.frame(in: .global))
+            }
+        )
+        .onPreferenceChange(IconMenuFramePreferenceKey.self) { iconMenuFrame = $0 }
         .tooltip(String(localized: "Choose an icon"), alignment: .trailing, dismissOnPress: true)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Command icon")
@@ -224,10 +232,6 @@ struct CustomCommandEditorView: View {
                         .toggleStyle(.checkbox)
                         .focusable()
                         .focused($focusedControl, equals: .argumentOptional(id))
-                        .onKeyPress(.space) {
-                            argument.isOptional.toggle()
-                            return .handled
-                        }
                     action(.removeArgument(id), perform: { editor.removeArgument(id: id) }) {
                         Image(systemName: "minus.circle")
                     }
@@ -279,17 +283,13 @@ struct CustomCommandEditorView: View {
         _ field: CustomCommandEditorSession.Field, perform: @escaping () -> Void,
         @ViewBuilder label: () -> Label
     ) -> some View {
-        label()
-            .contentShape(.rect)
-            .onTapGesture(perform: perform)
-            .focusable()
-            .focused($focusedControl, equals: field)
-            .onKeyPress(keys: [.return, .space]) { _ in
-                perform()
-                return .handled
-            }
-            .accessibilityAddTraits(.isButton)
-            .accessibilityAction { perform() }
+        Button(action: perform) {
+            label()
+        }
+        .buttonStyle(.plain)
+        .focused($focusedControl, equals: field)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { perform() }
     }
 
     private func focusBinding(_ field: CustomCommandEditorSession.Field) -> Binding<Bool> {
@@ -312,10 +312,6 @@ struct CustomCommandEditorView: View {
         .toggleStyle(.checkbox)
         .focusable()
         .focused($focusedControl, equals: focus)
-        .onKeyPress(.space) {
-            value.wrappedValue.toggle()
-            return .handled
-        }
         .id(focus)
     }
 }

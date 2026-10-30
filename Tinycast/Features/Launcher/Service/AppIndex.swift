@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 
 struct AppEntry: Identifiable, Hashable, Sendable {
     enum Kind: String, CaseIterable, Sendable {

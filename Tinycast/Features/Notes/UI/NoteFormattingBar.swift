@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct NoteFormattingBar: View {
     @Environment(NotesCoordinator.self) private var notes
@@ -72,31 +73,33 @@ struct NoteFormattingBar: View {
     ]
 
     var body: some View {
-        let formatting = notes.formatting
-        let isExpanded = notes.isFormattingBarExpanded
-        HStack(spacing: Theme.Spacing.sm) {
-            if isExpanded {
-                HStack(spacing: Theme.Spacing.sm) {
-                    NoteHeadingButton(
-                        level: formatting.headingLevel, isOpen: notes.isHeadingMenuPresented,
-                        action: notes.toggleHeadingMenu
-                    ) { notes.headingButtonFrame = $0 }
-                    group(Self.styles, formatting)
-                    group(Self.blocks, formatting)
-                    group(Self.lists, formatting)
-                }
-                // Grows out of the round button; nothing leaves the capsule, so no clip is needed.
-                .transition(.scale(scale: 0.6, anchor: .trailing).combined(with: .opacity))
-            }
-            NoteFormattingToggle(isExpanded: isExpanded, action: notes.toggleFormattingBar)
-                // Drawn above the buttons, so they grow out from behind it.
-                .zIndex(1)
+        WithObservationTracking {
+            let formatting = notes.formatting
+                    let isExpanded = notes.isFormattingBarExpanded
+                    HStack(spacing: Theme.Spacing.sm) {
+                        if isExpanded {
+                            HStack(spacing: Theme.Spacing.sm) {
+                                NoteHeadingButton(
+                                    level: formatting.headingLevel, isOpen: notes.isHeadingMenuPresented,
+                                    action: notes.toggleHeadingMenu
+                                ) { notes.headingButtonFrame = $0 }
+                                group(Self.styles, formatting)
+                                group(Self.blocks, formatting)
+                                group(Self.lists, formatting)
+                            }
+                            // Grows out of the round button; nothing leaves the capsule, so no clip is needed.
+                            .transition(.scale(scale: 0.6, anchor: .trailing).combined(with: .opacity))
+                        }
+                        NoteFormattingToggle(isExpanded: isExpanded, action: notes.toggleFormattingBar)
+                            // Drawn above the buttons, so they grow out from behind it.
+                            .zIndex(1)
+                    }
+                    .padding(Theme.Spacing.xs)
+                    // Behind the buttons, not around them: glass clips content, tooltips draw outside it.
+                    .background { Capsule().fill(Color.clear).frosted(in: Capsule()) }
+                    .accessibilityElement(children: .contain)
+                    .accessibilityLabel("Formatting")
         }
-        .padding(Theme.Spacing.xs)
-        // Behind the buttons, not around them: glass clips content, tooltips draw outside it.
-        .background { Capsule().fill(Color.clear).frosted(in: Capsule()) }
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Formatting")
     }
 
     private func group(_ controls: [Control], _ formatting: NoteFormatting) -> some View {
@@ -120,14 +123,16 @@ private struct NoteFormattingToggle: View {
     let action: () -> Void
 
     var body: some View {
-        BarButton(isSelected: isExpanded, isCompact: true, action: action) {
-            NoteBarGlyph(name: "paintbrush")
+        WithObservationTracking {
+            BarButton(isSelected: isExpanded, isCompact: true, action: action) {
+                        NoteBarGlyph(name: "paintbrush")
+                    }
+                    .focusable(false)
+                    .accessibilityLabel("Formatting")
+                    .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
+                    // Against the window's trailing edge, so a centred label would run off it.
+                    .tooltip(String(localized: "Formatting  ⌥⌘T"), alignment: .trailing)
         }
-        .focusable(false)
-        .accessibilityLabel("Formatting")
-        .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
-        // Against the window's trailing edge, so a centred label would run off it.
-        .tooltip(String(localized: "Formatting  ⌥⌘T"), alignment: .trailing)
     }
 }
 
@@ -136,8 +141,10 @@ private struct NoteBarGlyph: View {
     let name: String
 
     var body: some View {
-        SymbolImage(name: name, size: Theme.Size.noteGlyph)
-            .frame(width: Theme.Size.noteGlyph, height: Theme.Size.noteGlyph)
+        WithObservationTracking {
+            SymbolImage(name: name, size: Theme.Size.noteGlyph)
+                        .frame(width: Theme.Size.noteGlyph, height: Theme.Size.noteGlyph)
+        }
     }
 }
 
@@ -151,28 +158,30 @@ private struct NoteHeadingButton: View {
     private var isHeading: Bool { (1...6).contains(level ?? 0) }
 
     var body: some View {
-        BarButton(isSelected: isHeading || isOpen, isCompact: true, action: action) {
-            HStack(spacing: Theme.Spacing.xs) {
-                NoteBarGlyph(name: "textformat.size")
-                // Rotates rather than swaps, so opening the menu cannot shift the bar.
-                Image(systemName: "chevron.down")
-                    .font(Theme.Typography.disclosure)
-                    .rotationEffect(.degrees(isOpen ? 180 : 0))
-                    .animation(reduceMotion ? nil : Theme.MenuMotion.chevronAnimation, value: isOpen)
-            }
+        WithObservationTracking {
+            BarButton(isSelected: isHeading || isOpen, isCompact: true, action: action) {
+                        HStack(spacing: Theme.Spacing.xs) {
+                            NoteBarGlyph(name: "textformat.size")
+                            // Rotates rather than swaps, so opening the menu cannot shift the bar.
+                            Image(systemName: "chevron.down")
+                                .font(Theme.Typography.disclosure)
+                                .rotationEffect(.degrees(isOpen ? 180 : 0))
+                                .animation(reduceMotion ? nil : Theme.MenuMotion.chevronAnimation, value: isOpen)
+                        }
+                    }
+                    // Its menu hangs off this frame, which only the laid-out view knows.
+                    .onGeometryChange(for: CGRect.self) {
+                        $0.frame(in: .global)
+                    } action: {
+                        onFrameChange($0)
+                    }
+                    .focusable(false)
+                    .accessibilityLabel("Heading")
+                    .accessibilityValue(accessibilityValue)
+                    .accessibilityAddTraits(isHeading ? .isSelected : [])
+                    // The leading end of an expanded capsule, which a narrow note pushes against the edge.
+                    .tooltip(isOpen ? nil : String(localized: "Heading"), alignment: .leading)
         }
-        // Its menu hangs off this frame, which only the laid-out view knows.
-        .onGeometryChange(for: CGRect.self) {
-            $0.frame(in: .global)
-        } action: {
-            onFrameChange($0)
-        }
-        .focusable(false)
-        .accessibilityLabel("Heading")
-        .accessibilityValue(accessibilityValue)
-        .accessibilityAddTraits(isHeading ? .isSelected : [])
-        // The leading end of an expanded capsule, which a narrow note pushes against the edge.
-        .tooltip(isOpen ? nil : String(localized: "Heading"), alignment: .leading)
     }
 
     private var accessibilityValue: String {

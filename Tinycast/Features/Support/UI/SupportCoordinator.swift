@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 import SwiftUI
 
 /// The support window's lifecycle. Every route lands here, so the anchor moves once per showing.

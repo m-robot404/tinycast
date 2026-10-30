@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct HyperKeyDiagnosticsSection: View {
     let diagnostics: HyperKeyDiagnostics
@@ -6,93 +7,95 @@ struct HyperKeyDiagnosticsSection: View {
     let restart: () -> Void
 
     var body: some View {
-        Section {
-            SettingsRow(title: String(localized: "Active")) { yesNo(diagnostics.isActive) }
-            SettingsRow(title: String(localized: "Active Key")) {
-                DiagnosticValue(
-                    text: diagnostics.activeKeyTitle ?? String(localized: "None"),
-                    tone: diagnostics.activeKeyTitle == nil ? .invalid : .valid)
-            }
-            SettingsRow(title: String(localized: "Event Tap")) { optional(diagnostics.eventTapEnabled) }
-            SettingsRow(title: String(localized: "Run Loop Source")) {
-                optional(diagnostics.runLoopSourceValid)
-            }
-            if let secureInput = diagnostics.secureInput {
-                SettingsRow(
-                    title: String(localized: "Secure Input"), subtitle: describe(secureInput),
-                    subtitleLineLimit: 4
-                ) {
-                    DiagnosticValue(
-                        text: String(localized: "Active"),
-                        tone: diagnostics.secureInputCompatibilityActive ? .valid : .invalid)
-                }
-            }
-            if diagnostics.isActive {
-                SettingsRow(title: String(localized: "Remapped Keyboards"), alignment: .top) {
-                    DiagnosticList(
-                        items: remappedItems, empty: (String(localized: "None"), DiagnosticTone.neutral))
-                }
-            }
-            SettingsRow(
-                title: String(localized: "Conflicting Apps"),
-                subtitle: String(localized: "Apps running now that also remap keys."),
-                alignment: .top
-            ) {
-                DiagnosticList(items: conflictItems, empty: (String(localized: "None"), DiagnosticTone.valid))
-            }
-            if let takeover = diagnostics.takeover {
-                SettingsRow(
-                    title: String(localized: "Remapped by Another App"),
-                    subtitle: String(
-                        localized:
-                            "Caps Lock goes elsewhere on these keyboards, so another app's Hyper Key runs."),
-                    subtitleLineLimit: 2, alignment: .top
-                ) {
-                    DiagnosticList(items: takeover.keyboards.map { ($0, DiagnosticTone.invalid) }, empty: nil)
-                }
-            }
-            SettingsRow(
-                title: String(localized: "Apps Changing Keys"),
-                subtitle: String(
-                    localized: "Other apps that rewrite keystrokes. A slow one delays all typing."),
-                subtitleLineLimit: 2, alignment: .top
-            ) {
-                DiagnosticList(
-                    items: keyboardTapItems, empty: (String(localized: "None"), DiagnosticTone.valid))
-            }
-            SettingsRow(
-                title: String(localized: "Karabiner Conflict"), subtitle: karabinerDetail,
-                subtitleLineLimit: 2
-            ) {
-                DiagnosticValue(
-                    text: diagnostics.karabinerConflict
-                        ? String(localized: "Detected") : String(localized: "None"),
-                    tone: diagnostics.karabinerConflict ? .invalid : .valid)
-            }
-            if !diagnostics.capsLockMappingConflicts.isEmpty {
-                SettingsRow(
-                    title: String(localized: "Caps Lock Mapping Conflicts"),
-                    subtitle: String(
-                        localized: """
-                            Modifier Keys in System Settings remaps Caps Lock, which blocks the Hyper Key.
-                            """),
-                    subtitleLineLimit: 2, alignment: .top
-                ) {
-                    VStack(alignment: .trailing, spacing: Theme.Spacing.xs) {
-                        DiagnosticList(items: capsLockConflictItems, empty: nil)
-                        Button("Open Keyboard Settings…") {
-                            AppLauncher.openSettingsPane(bundleID: "com.apple.Keyboard-Settings.extension")
+        WithObservationTracking {
+            Section {
+                        SettingsRow(title: String(localized: "Active")) { yesNo(diagnostics.isActive) }
+                        SettingsRow(title: String(localized: "Active Key")) {
+                            DiagnosticValue(
+                                text: diagnostics.activeKeyTitle ?? String(localized: "None"),
+                                tone: diagnostics.activeKeyTitle == nil ? .invalid : .valid)
+                        }
+                        SettingsRow(title: String(localized: "Event Tap")) { optional(diagnostics.eventTapEnabled) }
+                        SettingsRow(title: String(localized: "Run Loop Source")) {
+                            optional(diagnostics.runLoopSourceValid)
+                        }
+                        if let secureInput = diagnostics.secureInput {
+                            SettingsRow(
+                                title: String(localized: "Secure Input"), subtitle: describe(secureInput),
+                                subtitleLineLimit: 4
+                            ) {
+                                DiagnosticValue(
+                                    text: String(localized: "Active"),
+                                    tone: diagnostics.secureInputCompatibilityActive ? .valid : .invalid)
+                            }
+                        }
+                        if diagnostics.isActive {
+                            SettingsRow(title: String(localized: "Remapped Keyboards"), alignment: .top) {
+                                DiagnosticList(
+                                    items: remappedItems, empty: (String(localized: "None"), DiagnosticTone.neutral))
+                            }
+                        }
+                        SettingsRow(
+                            title: String(localized: "Conflicting Apps"),
+                            subtitle: String(localized: "Apps running now that also remap keys."),
+                            alignment: .top
+                        ) {
+                            DiagnosticList(items: conflictItems, empty: (String(localized: "None"), DiagnosticTone.valid))
+                        }
+                        if let takeover = diagnostics.takeover {
+                            SettingsRow(
+                                title: String(localized: "Remapped by Another App"),
+                                subtitle: String(
+                                    localized:
+                                        "Caps Lock goes elsewhere on these keyboards, so another app's Hyper Key runs."),
+                                subtitleLineLimit: 2, alignment: .top
+                            ) {
+                                DiagnosticList(items: takeover.keyboards.map { ($0, DiagnosticTone.invalid) }, empty: nil)
+                            }
+                        }
+                        SettingsRow(
+                            title: String(localized: "Apps Changing Keys"),
+                            subtitle: String(
+                                localized: "Other apps that rewrite keystrokes. A slow one delays all typing."),
+                            subtitleLineLimit: 2, alignment: .top
+                        ) {
+                            DiagnosticList(
+                                items: keyboardTapItems, empty: (String(localized: "None"), DiagnosticTone.valid))
+                        }
+                        SettingsRow(
+                            title: String(localized: "Karabiner Conflict"), subtitle: karabinerDetail,
+                            subtitleLineLimit: 2
+                        ) {
+                            DiagnosticValue(
+                                text: diagnostics.karabinerConflict
+                                    ? String(localized: "Detected") : String(localized: "None"),
+                                tone: diagnostics.karabinerConflict ? .invalid : .valid)
+                        }
+                        if !diagnostics.capsLockMappingConflicts.isEmpty {
+                            SettingsRow(
+                                title: String(localized: "Caps Lock Mapping Conflicts"),
+                                subtitle: String(
+                                    localized: """
+                                        Modifier Keys in System Settings remaps Caps Lock, which blocks the Hyper Key.
+                                        """),
+                                subtitleLineLimit: 2, alignment: .top
+                            ) {
+                                VStack(alignment: .trailing, spacing: Theme.Spacing.xs) {
+                                    DiagnosticList(items: capsLockConflictItems, empty: nil)
+                                    Button("Open Keyboard Settings…") {
+                                        AppLauncher.openSettingsPane(bundleID: "com.apple.Keyboard-Settings.extension")
+                                    }
+                                }
+                            }
+                        }
+                    } header: {
+                        HStack {
+                            Text("Hyper Key Diagnostics")
+                            Spacer()
+                            Button("Restart Hyper Key", action: restart)
+                            Button("Refresh", action: refresh)
                         }
                     }
-                }
-            }
-        } header: {
-            HStack {
-                Text("Hyper Key Diagnostics")
-                Spacer()
-                Button("Restart Hyper Key", action: restart)
-                Button("Refresh", action: refresh)
-            }
         }
     }
 
@@ -176,9 +179,11 @@ struct HyperKeyDiagnosticsSection: View {
         let tone: DiagnosticTone
 
         var body: some View {
-            HStack(spacing: Theme.Spacing.sm) {
-                Text(text).foregroundStyle(tone.color)
-                ColorDot(color: tone.color)
+            WithObservationTracking {
+                HStack(spacing: Theme.Spacing.sm) {
+                                Text(text).foregroundStyle(tone.color)
+                                ColorDot(color: tone.color)
+                            }
             }
         }
     }
@@ -188,13 +193,15 @@ struct HyperKeyDiagnosticsSection: View {
         let empty: (String, DiagnosticTone)?
 
         var body: some View {
-            VStack(alignment: .trailing, spacing: Theme.Spacing.xs) {
-                if items.isEmpty, let empty {
-                    DiagnosticValue(text: empty.0, tone: empty.1)
-                }
-                ForEach(Array(items.enumerated()), id: \.offset) { _, item in
-                    DiagnosticValue(text: item.0, tone: item.1)
-                }
+            WithObservationTracking {
+                VStack(alignment: .trailing, spacing: Theme.Spacing.xs) {
+                                if items.isEmpty, let empty {
+                                    DiagnosticValue(text: empty.0, tone: empty.1)
+                                }
+                                ForEach(Array(items.enumerated()), id: \.offset) { _, item in
+                                    DiagnosticValue(text: item.0, tone: item.1)
+                                }
+                            }
             }
         }
     }

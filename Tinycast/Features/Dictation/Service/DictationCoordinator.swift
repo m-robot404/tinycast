@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 import AVFoundation
 
 @MainActor
@@ -65,7 +66,7 @@ final class DictationCoordinator {
             return
         }
         guard enableTask == nil else { return }
-        NSApp.activate()
+        NSApp.activate(ignoringOtherApps: true)
         enableTask = Task { [weak self] in
             guard let self else { return }
             defer { enableTask = nil }
@@ -144,6 +145,10 @@ final class DictationCoordinator {
     }
 
     private func begin(target: InjectionTarget?) {
+        // Qwen's stateful Core ML API requires macOS 15; use the Parakeet engine on Ventura.
+        if !settings.dictationModel.isAvailableOnCurrentOS {
+            settings.dictationModel = .redux
+        }
         guard models.isInstalled(settings.dictationModel) else {
             field = nil
             showMessage(String(localized: "Download the dictation model in Settings first"), .danger)

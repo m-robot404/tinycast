@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct MCPServerEditorTarget: Identifiable {
     let server: MCPServer
@@ -85,152 +86,154 @@ struct MCPServerEditor: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            SettingsEditorHeader(
-                title: target.isNew ? "Add MCP Server" : "Edit MCP Server"
-            )
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, Theme.Spacing.dialogInset)
-            .padding(.top, Theme.Spacing.dialogInset)
-            .padding(.bottom, Theme.Spacing.xl)
+        WithObservationTracking {
+            VStack(spacing: 0) {
+                        SettingsEditorHeader(
+                            title: target.isNew ? "Add MCP Server" : "Edit MCP Server"
+                        )
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, Theme.Spacing.dialogInset)
+                        .padding(.top, Theme.Spacing.dialogInset)
+                        .padding(.bottom, Theme.Spacing.xl)
 
-            Form {
-                Section {
-                    field("Name") {
-                        TextField("Name", text: $name, prompt: Text(verbatim: "GitHub"))
-                            .settingsEditorTextField()
-                    }
-                    field("Handle") {
-                        Text(verbatim: "@\(MCPSlug.normalize(name.isEmpty ? target.server.slug : name))")
-                            .foregroundStyle(.secondary)
-                    }
-                    field("Connection") {
-                        SteadySegmentedPicker(
-                            title: String(localized: "Connection"),
-                            options: Kind.allCases.map { .init(value: $0, title: $0.title) },
-                            selection: $kind)
-                    }
-                    if kind == .http {
-                        field("URL") {
-                            TextField("URL", text: $url, prompt: Text(verbatim: "https://example.com/mcp"))
-                                .settingsEditorTextField()
-                        }
-                        field("Authentication") {
-                            Picker("Authentication", selection: $usesOAuth) {
-                                Text("Header").tag(false)
-                                Text(verbatim: "OAuth").tag(true)
-                            }
-                            .labelsHidden()
-                        }
-                        if usesOAuth {
-                            oauthFields
-                        } else {
-                            field("Header") {
-                                TextField(
-                                    "Header", text: $headerName, prompt: Text(verbatim: "Authorization")
+                        Form {
+                            Section {
+                                field("Name") {
+                                    TextField("Name", text: $name, prompt: Text(verbatim: "GitHub"))
+                                        .settingsEditorTextField()
+                                }
+                                field("Handle") {
+                                    Text(verbatim: "@\(MCPSlug.normalize(name.isEmpty ? target.server.slug : name))")
+                                        .foregroundStyle(.secondary)
+                                }
+                                field("Connection") {
+                                    SteadySegmentedPicker(
+                                        title: String(localized: "Connection"),
+                                        options: Kind.allCases.map { .init(value: $0, title: $0.title) },
+                                        selection: $kind)
+                                }
+                                if kind == .http {
+                                    field("URL") {
+                                        TextField("URL", text: $url, prompt: Text(verbatim: "https://example.com/mcp"))
+                                            .settingsEditorTextField()
+                                    }
+                                    field("Authentication") {
+                                        Picker("Authentication", selection: $usesOAuth) {
+                                            Text("Header").tag(false)
+                                            Text(verbatim: "OAuth").tag(true)
+                                        }
+                                        .labelsHidden()
+                                    }
+                                    if usesOAuth {
+                                        oauthFields
+                                    } else {
+                                        field("Header") {
+                                            TextField(
+                                                "Header", text: $headerName, prompt: Text(verbatim: "Authorization")
+                                            )
+                                            .settingsEditorTextField()
+                                        }
+                                        field("Value") {
+                                            RevealableSecureField(
+                                                title: String(localized: "Value"), text: $headerValue,
+                                                prompt: Text(verbatim: "Bearer …")
+                                            )
+                                            .settingsEditorTextField()
+                                        }
+                                    }
+                                } else {
+                                    field("Command") {
+                                        TextField("Command", text: $command, prompt: Text(verbatim: "npx"))
+                                            .settingsEditorTextField()
+                                    }
+                                    field("Arguments") {
+                                        TextField(
+                                            "Arguments", text: $argumentText,
+                                            prompt: Text(verbatim: "-y @modelcontextprotocol/server-filesystem ~/Desktop")
+                                        )
+                                        .settingsEditorTextField()
+                                    }
+                                    field("Environment") {
+                                        TextField(
+                                            "Environment", text: $environmentText,
+                                            prompt: Text(verbatim: "GITHUB_TOKEN=…"), axis: .vertical
+                                        )
+                                        .textFieldStyle(.plain)
+                                        .lineLimit(2...5)
+                                        .settingsEditorTextArea(height: Theme.Size.editorTextHeight)
+                                    }
+                                }
+                            } footer: {
+                                Text(
+                                    kind == .http
+                                        ? """
+                                        Remote endpoints must use HTTPS. Credentials are stored in your login \
+                                        Keychain, never in preferences.
+                                        """
+                                        : """
+                                        The command runs on this Mac with your own account. One NAME=value per \
+                                        line; values are stored in your login Keychain.
+                                        """
                                 )
-                                .settingsEditorTextField()
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                             }
-                            field("Value") {
-                                RevealableSecureField(
-                                    title: String(localized: "Value"), text: $headerValue,
-                                    prompt: Text(verbatim: "Bearer …")
+
+                            Section {
+                                Toggle("Offer this server's tools", isOn: $isEnabled)
+                                field("Trust") {
+                                    Picker("Trust", selection: $trust) {
+                                        ForEach(MCPTrust.allCases) { Text($0.title).tag($0) }
+                                    }
+                                    .labelsHidden()
+                                }
+                                HStack(spacing: Theme.Spacing.lg) {
+                                    Button("Test Connection", action: test)
+                                        .disabled(operation != nil)
+                                    probeLabel
+                                }
+                                if let error {
+                                    Text(error).foregroundStyle(.orange)
+                                }
+                            } footer: {
+                                Text(
+                                    """
+                                    Ask Each Chat puts the first tool call of every conversation through a \
+                                    confirmation. Never Allow withholds the server without removing it.
+                                    """
                                 )
-                                .settingsEditorTextField()
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                             }
                         }
-                    } else {
-                        field("Command") {
-                            TextField("Command", text: $command, prompt: Text(verbatim: "npx"))
-                                .settingsEditorTextField()
-                        }
-                        field("Arguments") {
-                            TextField(
-                                "Arguments", text: $argumentText,
-                                prompt: Text(verbatim: "-y @modelcontextprotocol/server-filesystem ~/Desktop")
-                            )
-                            .settingsEditorTextField()
-                        }
-                        field("Environment") {
-                            TextField(
-                                "Environment", text: $environmentText,
-                                prompt: Text(verbatim: "GITHUB_TOKEN=…"), axis: .vertical
-                            )
-                            .textFieldStyle(.plain)
-                            .lineLimit(2...5)
-                            .settingsEditorTextArea(height: Theme.Size.editorTextHeight)
-                        }
-                    }
-                } footer: {
-                    Text(
-                        kind == .http
-                            ? """
-                            Remote endpoints must use HTTPS. Credentials are stored in your login \
-                            Keychain, never in preferences.
-                            """
-                            : """
-                            The command runs on this Mac with your own account. One NAME=value per \
-                            line; values are stored in your login Keychain.
-                            """
-                    )
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                }
+                        .formStyle(.grouped)
+                        .scrollContentBackground(.hidden)
 
-                Section {
-                    Toggle("Offer this server's tools", isOn: $isEnabled)
-                    field("Trust") {
-                        Picker("Trust", selection: $trust) {
-                            ForEach(MCPTrust.allCases) { Text($0.title).tag($0) }
+                        Divider()
+                        HStack(spacing: Theme.Spacing.md) {
+                            Button("Cancel", action: onCancel)
+                                .buttonStyle(.modalAction(.cancel))
+                                .keyboardShortcut(.cancelAction)
+                            Button("Save", action: save)
+                                .disabled(operation != nil)
+                                .buttonStyle(.modalAction(.primary))
+                                .keyboardShortcut(.defaultAction)
                         }
-                        .labelsHidden()
+                        .padding(Theme.Spacing.dialogInset)
                     }
-                    HStack(spacing: Theme.Spacing.lg) {
-                        Button("Test Connection", action: test)
-                            .disabled(operation != nil)
-                        probeLabel
+                    .frame(width: 620, height: 560)
+                    .settingsEditorPanelSurface()
+                    .onDisappear {
+                        operation?.cancel()
+                        coordinator.cancelSignIn(target.server.id)
+                        if target.isNew { coordinator.discardUnsaved(target.server.id) }
                     }
-                    if let error {
-                        Text(error).foregroundStyle(.orange)
-                    }
-                } footer: {
-                    Text(
-                        """
-                        Ask Each Chat puts the first tool call of every conversation through a \
-                        confirmation. Never Allow withholds the server without removing it.
-                        """
-                    )
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                }
-            }
-            .formStyle(.grouped)
-            .scrollContentBackground(.hidden)
-
-            Divider()
-            HStack(spacing: Theme.Spacing.md) {
-                Button("Cancel", action: onCancel)
-                    .buttonStyle(.modalAction(.cancel))
-                    .keyboardShortcut(.cancelAction)
-                Button("Save", action: save)
-                    .disabled(operation != nil)
-                    .buttonStyle(.modalAction(.primary))
-                    .keyboardShortcut(.defaultAction)
-            }
-            .padding(Theme.Spacing.dialogInset)
+                    .onChange(of: url) { cancelOperation() }
+                    .onChange(of: usesOAuth) { cancelOperation() }
+                    .onChange(of: kind) { cancelOperation() }
+                    .onChange(of: clientID) { cancelOperation() }
+                    .onChange(of: clientSecret) { cancelOperation() }
         }
-        .frame(width: 620, height: 560)
-        .settingsEditorPanelSurface()
-        .onDisappear {
-            operation?.cancel()
-            coordinator.cancelSignIn(target.server.id)
-            if target.isNew { coordinator.discardUnsaved(target.server.id) }
-        }
-        .onChange(of: url) { cancelOperation() }
-        .onChange(of: usesOAuth) { cancelOperation() }
-        .onChange(of: kind) { cancelOperation() }
-        .onChange(of: clientID) { cancelOperation() }
-        .onChange(of: clientSecret) { cancelOperation() }
     }
 
     private var oauthFields: some View {

@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 /// One inline field. `id` keys its focus and value, so two fields may share a title.
 struct InlineArgument: Equatable {
@@ -25,35 +26,37 @@ struct InlineArgumentFields: View {
     @State private var visited: Set<String> = []
 
     var body: some View {
-        HStack(spacing: metrics.spacing.xs) {
-            if let symbol {
-                Image(nsImage: IconCache.symbolIcon(named: symbol))
-                    .resizable()
-                    .frame(width: Self.height(metrics), height: Self.height(metrics))
-            }
-            ForEach(arguments, id: \.id) { argument in
-                let isOwed = !argument.isOptional && visited.contains(argument.id)
-                if argument.options.isEmpty {
-                    ArgumentField(
-                        argument: argument, text: value(argument.id),
-                        isFocused: focused == argument.id, isOwed: isOwed, onSubmit: onSubmit
-                    )
-                    .focused($focused, equals: argument.id)
-                } else {
-                    ArgumentChoiceField(
-                        argument: argument, text: value(argument.id),
-                        isFocused: focused == argument.id, isOwed: isOwed,
-                        onOpen: { openOptions(argument.id) }
-                    )
-                    .focused($focused, equals: argument.id)
-                }
-            }
-        }
-        // Only a field the caret has been in and left may say it is still owed a value.
-        .onChange(of: focused) { previous, _ in
-            if let previous, arguments.contains(where: { $0.id == previous }) {
-                visited.insert(previous)
-            }
+        WithObservationTracking {
+            HStack(spacing: metrics.spacing.xs) {
+                        if let symbol {
+                            Image(nsImage: IconCache.symbolIcon(named: symbol))
+                                .resizable()
+                                .frame(width: Self.height(metrics), height: Self.height(metrics))
+                        }
+                        ForEach(arguments, id: \.id) { argument in
+                            let isOwed = !argument.isOptional && visited.contains(argument.id)
+                            if argument.options.isEmpty {
+                                ArgumentField(
+                                    argument: argument, text: value(argument.id),
+                                    isFocused: focused == argument.id, isOwed: isOwed, onSubmit: onSubmit
+                                )
+                                .focused($focused, equals: argument.id)
+                            } else {
+                                ArgumentChoiceField(
+                                    argument: argument, text: value(argument.id),
+                                    isFocused: focused == argument.id, isOwed: isOwed,
+                                    onOpen: { openOptions(argument.id) }
+                                )
+                                .focused($focused, equals: argument.id)
+                            }
+                        }
+                    }
+                    // Only a field the caret has been in and left may say it is still owed a value.
+                    .onChange(of: focused) { previous, _ in
+                        if let previous, arguments.contains(where: { $0.id == previous }) {
+                            visited.insert(previous)
+                        }
+                    }
         }
     }
 
@@ -129,18 +132,20 @@ private struct ArgumentField: View {
     @State private var hovered = false
 
     var body: some View {
-        TextField(
-            "", text: $text,
-            prompt: Text(argument.title).foregroundStyle(Theme.Colors.textTertiary)
-        )
-        .textFieldStyle(.plain)
-        .font(metrics.typography.rowTrailing)
-        .tint(Theme.Colors.textPrimary)
-        .onSubmit(onSubmit)
-        .modifier(
-            ArgumentFieldChrome(
-                argument: argument, isFocused: isFocused, isOwed: isOwed && text.isEmpty,
-                hovered: $hovered))
+        WithObservationTracking {
+            TextField(
+                        "", text: $text,
+                        prompt: Text(argument.title).foregroundStyle(Theme.Colors.textTertiary)
+                    )
+                    .textFieldStyle(.plain)
+                    .font(metrics.typography.rowTrailing)
+                    .tint(Theme.Colors.textPrimary)
+                    .onSubmit(onSubmit)
+                    .modifier(
+                        ArgumentFieldChrome(
+                            argument: argument, isFocused: isFocused, isOwed: isOwed && text.isEmpty,
+                            hovered: $hovered))
+        }
     }
 }
 
@@ -155,36 +160,38 @@ private struct ArgumentChoiceField: View {
     @State private var hovered = false
 
     var body: some View {
-        HStack(spacing: metrics.spacing.xxs) {
-            Text(text.isEmpty ? argument.title : text)
-                .font(metrics.typography.rowTrailing)
-                .foregroundStyle(
-                    text.isEmpty ? Theme.Colors.textTertiary : Theme.Colors.textPrimary
-                )
-                .lineLimit(1)
-            Spacer(minLength: 0)
-            Image(systemName: "chevron.down")
-                .font(.system(size: 8, weight: .semibold))
-                .foregroundStyle(Theme.Colors.textTertiary)
+        WithObservationTracking {
+            HStack(spacing: metrics.spacing.xxs) {
+                        Text(text.isEmpty ? argument.title : text)
+                            .font(metrics.typography.rowTrailing)
+                            .foregroundStyle(
+                                text.isEmpty ? Theme.Colors.textTertiary : Theme.Colors.textPrimary
+                            )
+                            .lineLimit(1)
+                        Spacer(minLength: 0)
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 8, weight: .semibold))
+                            .foregroundStyle(Theme.Colors.textTertiary)
+                    }
+                    .modifier(
+                        ArgumentFieldChrome(
+                            argument: argument, isFocused: isFocused, isOwed: isOwed && text.isEmpty,
+                            hovered: $hovered)
+                    )
+                    .contentShape(Rectangle())
+                    .focusable()
+                    // The chrome draws the focused edge, so AppKit's blue ring would be a second one.
+                    .focusEffectDisabled()
+                    .onTapGesture(perform: onOpen)
+                    .onKeyPress(keys: [.return, KeyEquivalent("\u{3}")]) { _ in
+                        onOpen()
+                        return .handled
+                    }
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(Text(argument.title))
+                    .accessibilityValue(Text(text.isEmpty ? String(localized: "No value") : text))
+                    .accessibilityHint(Text("Opens a list of choices"))
+                    .accessibilityAddTraits(.isButton)
         }
-        .modifier(
-            ArgumentFieldChrome(
-                argument: argument, isFocused: isFocused, isOwed: isOwed && text.isEmpty,
-                hovered: $hovered)
-        )
-        .contentShape(Rectangle())
-        .focusable()
-        // The chrome draws the focused edge, so AppKit's blue ring would be a second one.
-        .focusEffectDisabled()
-        .onTapGesture(perform: onOpen)
-        .onKeyPress(keys: [.return, KeyEquivalent("\u{3}")]) { _ in
-            onOpen()
-            return .handled
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text(argument.title))
-        .accessibilityValue(Text(text.isEmpty ? String(localized: "No value") : text))
-        .accessibilityHint(Text("Opens a list of choices"))
-        .accessibilityAddTraits(.isButton)
     }
 }

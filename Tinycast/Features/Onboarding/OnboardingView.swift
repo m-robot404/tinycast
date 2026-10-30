@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 import Combine
 import SwiftUI
 
@@ -19,37 +20,39 @@ struct OnboardingView: View {
     static let initialSize = CGSize(width: width, height: 352)
 
     var body: some View {
-        VStack(spacing: Theme.Spacing.lg) {
-            hero
-            stepContent
-            footer
-        }
-        // Less on top: the title bar adds 32pt, and the lights must be cleared.
-        .padding(.top, Theme.Spacing.xs)
-        .padding([.horizontal, .bottom], Theme.Spacing.xxl)
-        .frame(maxWidth: .infinity)
-        // The ideal height, not the window's, so sizing to it converges instead of feeding back.
-        .fixedSize(horizontal: false, vertical: true)
-        .onGeometryChange(for: CGFloat.self) {
-            $0.size.height
-        } action: {
-            core.onboardingCoordinator.fit(height: $0)
-        }
-        // Only the gradient reaches under the titlebar; the content stays in the safe area.
-        .background(
-            LinearGradient(
-                colors: [Theme.Colors.sheen, Color.clear],
-                startPoint: .top, endPoint: .center
-            )
-            .ignoresSafeArea()
-        )
-        // Onboarding's shortcut step has a recorder too, and it isn't inside a `SettingsPane`.
-        .shortcutRecorderPopoverHost()
-        .animation(.easeInOut(duration: 0.2), value: step)
-        .onAppear { accessibilityTrusted = Permissions.isAccessibilityTrusted() }
-        .onReceive(refreshTimer) { _ in
-            let trusted = Permissions.isAccessibilityTrusted()
-            if trusted != accessibilityTrusted { accessibilityTrusted = trusted }
+        WithObservationTracking {
+            VStack(spacing: Theme.Spacing.lg) {
+                        hero
+                        stepContent
+                        footer
+                    }
+                    // Less on top: the title bar adds 32pt, and the lights must be cleared.
+                    .padding(.top, Theme.Spacing.xs)
+                    .padding([.horizontal, .bottom], Theme.Spacing.xxl)
+                    .frame(maxWidth: .infinity)
+                    // The ideal height, not the window's, so sizing to it converges instead of feeding back.
+                    .fixedSize(horizontal: false, vertical: true)
+                    .onGeometryChange(for: CGFloat.self) {
+                        $0.size.height
+                    } action: {
+                        core.onboardingCoordinator.fit(height: $0)
+                    }
+                    // Only the gradient reaches under the titlebar; the content stays in the safe area.
+                    .background(
+                        LinearGradient(
+                            colors: [Theme.Colors.sheen, Color.clear],
+                            startPoint: .top, endPoint: .center
+                        )
+                        .ignoresSafeArea()
+                    )
+                    // Onboarding's shortcut step has a recorder too, and it isn't inside a `SettingsPane`.
+                    .shortcutRecorderPopoverHost()
+                    .animation(.easeInOut(duration: 0.2), value: step)
+                    .onAppear { accessibilityTrusted = Permissions.isAccessibilityTrusted() }
+                    .onReceive(refreshTimer) { _ in
+                        let trusted = Permissions.isAccessibilityTrusted()
+                        if trusted != accessibilityTrusted { accessibilityTrusted = trusted }
+                    }
         }
     }
 
@@ -139,7 +142,7 @@ struct OnboardingView: View {
     }
 
     private var shortcutStep: some View {
-        @Bindable var settings = settings
+        @ObservationPolyfill.Bindable var settings = settings
         return VStack(alignment: .leading, spacing: Theme.Spacing.md) {
             OnboardingCard {
                 OnboardingRow(

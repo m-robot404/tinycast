@@ -1,4 +1,5 @@
 import Foundation
+import ObservationPolyfill
 
 /// The cacheless exchange-rate fetcher. See docs/features/calculator.md#exchange-rates.
 @MainActor

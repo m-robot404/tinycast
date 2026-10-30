@@ -1,4 +1,5 @@
 import Foundation
+import ObservationPolyfill
 import Observation
 
 /// Apart from `AISettingsStore`: a peer of chat, with its own switch, route and settings pane.

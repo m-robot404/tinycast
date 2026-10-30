@@ -1,4 +1,5 @@
 import Foundation
+import ObservationPolyfill
 
 /// The daily release check. See docs/features/updates.md.
 @MainActor

@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 /// `AttributedString` only does inline styling, so headings and bullets are placed here.
 struct ReleaseNotesView: View {
@@ -7,14 +8,16 @@ struct ReleaseNotesView: View {
     private var blocks: [ReleaseNotes.Block] { ReleaseNotes.blocks(from: text) }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            ForEach(Array(blocks.enumerated()), id: \.offset) { index, block in
-                view(for: block)
-                    .padding(.top, isHeading(block) && index > 0 ? Theme.Spacing.md : 0)
-            }
+        WithObservationTracking {
+            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                        ForEach(Array(blocks.enumerated()), id: \.offset) { index, block in
+                            view(for: block)
+                                .padding(.top, isHeading(block) && index > 0 ? Theme.Spacing.md : 0)
+                        }
+                    }
+                    .font(.callout)
+                    .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .font(.callout)
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     @ViewBuilder

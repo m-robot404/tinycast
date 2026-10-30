@@ -1,4 +1,5 @@
 import Foundation
+import ObservationPolyfill
 import Observation
 
 @MainActor

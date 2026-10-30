@@ -1,20 +1,23 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct CameraView: View {
     let coordinator: CameraCoordinator
 
     var body: some View {
-        VStack(spacing: 0) {
-            CameraStage(feed: coordinator.feed, mirrored: coordinator.mirrored)
-                .frame(
-                    width: Theme.Size.cameraStage.width,
-                    height: Theme.Size.cameraStage.height)
-            footer
+        WithObservationTracking {
+            VStack(spacing: 0) {
+                        CameraStage(feed: coordinator.feed, mirrored: coordinator.mirrored)
+                            .frame(
+                                width: Theme.Size.cameraStage.width,
+                                height: Theme.Size.cameraStage.height)
+                        footer
+                    }
+                    .frame(width: Theme.Size.cameraStage.width)
+                    .background(Theme.Colors.panelScrim)
+                    .background(GlassEffectView())
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.dialog, style: .continuous))
         }
-        .frame(width: Theme.Size.cameraStage.width)
-        .background(Theme.Colors.panelScrim)
-        .background(GlassEffectView())
-        .clipShape(RoundedRectangle(cornerRadius: Theme.Radius.dialog, style: .continuous))
     }
 
     private var isLive: Bool {

@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct QuicklinkEditorScreen: PaletteScreen {
     let coordinator: QuicklinkCoordinator

@@ -1,4 +1,5 @@
 import Foundation
+import ObservationPolyfill
 import Observation
 
 /// MCP's action surface: what is running, what the model may call, and who is asked first.

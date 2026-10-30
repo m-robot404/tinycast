@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct CustomCommandList: View {
     @Environment(\.metrics) private var metrics
@@ -10,34 +11,38 @@ struct CustomCommandList: View {
     let onActions: (CustomCommand) -> Void
 
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(spacing: 0) {
-                    ForEach(results, id: \.id.uuidString) { command in
-                        Row(command: command, selected: command.id == selectedID)
-                            .selectionFrame(command.id == selectedID)
-                            .contentShape(Rectangle())
-                            .onTapGesture { onSelect(command) }
-                            .simultaneousGesture(
-                                TapGesture(count: 2).onEnded {
-                                    onSelect(command)
-                                    onActivate()
+        WithObservationTracking {
+            AnyView(
+                ScrollViewReader { proxy in
+                        ScrollView {
+                            LazyVStack(spacing: 0) {
+                                ForEach(results, id: \.id.uuidString) { command in
+                                    Row(command: command, selected: command.id == selectedID)
+                                        .selectionFrame(command.id == selectedID)
+                                        .contentShape(Rectangle())
+                                        .onTapGesture { onSelect(command) }
+                                        .simultaneousGesture(
+                                            TapGesture(count: 2).onEnded {
+                                                onSelect(command)
+                                                onActivate()
+                                            }
+                                        )
+                                        .onRightClick { onActions(command) }
                                 }
-                            )
-                            .onRightClick { onActions(command) }
-                    }
+                            }
+                            .padding(.horizontal, metrics.spacing.md)
+                            .padding(.top, metrics.spacing.xs)
+                            .padding(.bottom, metrics.spacing.md)
+                            .hideNativeScrollers()
+                            .scrollOriginAnchor()
+                        }
+                        .edgeDissolve()
+                        .thinScrollbar()
+                        .scrollFollowsSelection(
+                            scroll, row: selectedID?.uuidString,
+                            atOrigin: selectedID != nil && selectedID == results.first?.id, proxy: proxy)
                 }
-                .padding(.horizontal, metrics.spacing.md)
-                .padding(.top, metrics.spacing.xs)
-                .padding(.bottom, metrics.spacing.md)
-                .hideNativeScrollers()
-                .scrollOriginAnchor()
-            }
-            .edgeDissolve()
-            .thinScrollbar()
-            .scrollFollowsSelection(
-                scroll, row: selectedID?.uuidString,
-                atOrigin: selectedID != nil && selectedID == results.first?.id, proxy: proxy)
+            )
         }
     }
 
@@ -54,30 +59,32 @@ struct CustomCommandList: View {
         }
 
         var body: some View {
-            IconCache.observeStyle()
-            return HStack(spacing: metrics.spacing.lg) {
-                Image(nsImage: IconCache.symbolIcon(named: command.symbol))
-                    .resizable()
-                    .frame(width: metrics.size.resultRowIcon, height: metrics.size.resultRowIcon)
-                Text(command.name).font(metrics.typography.rowTitle).lineLimit(1)
-                Spacer(minLength: metrics.spacing.sm)
-                if !command.showsInRootSearch {
-                    SymbolImage(name: "eye.slash", size: metrics.size.menuIcon)
-                        .foregroundStyle(Theme.Colors.textTertiary)
-                        .accessibilityLabel("Hidden from root search")
-                }
-                if let keycaps = hotKeys.binding(for: .customCommand(id: command.id))?.keycaps {
-                    HStack(spacing: metrics.spacing.xxs) {
-                        ForEach(Array(keycaps.enumerated()), id: \.offset) { _, cap in
-                            KeyCapChip(text: cap, style: .outline)
-                        }
-                    }
-                }
+            WithObservationTracking {
+                let _ = IconCache.observeStyle()
+                HStack(spacing: metrics.spacing.lg) {
+                                Image(nsImage: IconCache.symbolIcon(named: command.symbol))
+                                    .resizable()
+                                    .frame(width: metrics.size.resultRowIcon, height: metrics.size.resultRowIcon)
+                                Text(command.name).font(metrics.typography.rowTitle).lineLimit(1)
+                                Spacer(minLength: metrics.spacing.sm)
+                                if !command.showsInRootSearch {
+                                    SymbolImage(name: "eye.slash", size: metrics.size.menuIcon)
+                                        .foregroundStyle(Theme.Colors.textTertiary)
+                                        .accessibilityLabel("Hidden from root search")
+                                }
+                                if let keycaps = hotKeys.binding(for: .customCommand(id: command.id))?.keycaps {
+                                    HStack(spacing: metrics.spacing.xxs) {
+                                        ForEach(Array(keycaps.enumerated()), id: \.offset) { _, cap in
+                                            KeyCapChip(text: cap, style: .outline)
+                                        }
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, metrics.spacing.md)
+                            .padding(.vertical, metrics.spacing.sm)
+                            .background(RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous).fill(fill))
+                            .armedHover($hovered)
             }
-            .padding(.horizontal, metrics.spacing.md)
-            .padding(.vertical, metrics.spacing.sm)
-            .background(RoundedRectangle(cornerRadius: metrics.radius.row, style: .continuous).fill(fill))
-            .armedHover($hovered)
         }
     }
 }

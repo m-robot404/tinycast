@@ -1,4 +1,5 @@
 import Foundation
+import ObservationPolyfill
 
 /// The dictionary screen's lookup: one term in flight, answered off the main actor.
 @MainActor

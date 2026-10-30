@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 extension DialogTone {
     /// Tints the subject glyph only; buttons take their color from `DialogAction.Role`.
@@ -26,41 +27,43 @@ struct DialogView: View {
     let onChoose: (Int) -> Void
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: metrics.radius.panel, style: .continuous)
-        VStack(alignment: .leading, spacing: metrics.spacing.xxl) {
-            VStack(alignment: .leading, spacing: metrics.spacing.xxl) {
-                if let symbol = request.symbol {
-                    DialogSymbol(name: symbol, tone: request.tone)
-                }
+        WithObservationTracking {
+            let shape = RoundedRectangle(cornerRadius: metrics.radius.panel, style: .continuous)
+                    VStack(alignment: .leading, spacing: metrics.spacing.xxl) {
+                        VStack(alignment: .leading, spacing: metrics.spacing.xxl) {
+                            if let symbol = request.symbol {
+                                DialogSymbol(name: symbol, tone: request.tone)
+                            }
 
-                VStack(alignment: .leading, spacing: metrics.spacing.sm) {
-                    Text(request.title)
-                        .font(metrics.typography.panelTitle)
-                    if let message = request.message {
-                        Text(message)
-                            .font(metrics.typography.rowTitle)
-                            .foregroundStyle(Theme.Colors.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
+                            VStack(alignment: .leading, spacing: metrics.spacing.sm) {
+                                Text(request.title)
+                                    .font(metrics.typography.panelTitle)
+                                if let message = request.message {
+                                    Text(message)
+                                        .font(metrics.typography.rowTitle)
+                                        .foregroundStyle(Theme.Colors.textSecondary)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+
+                            switch request.accessory {
+                            case .volume(let volume): VolumeSlider(state: volume)
+                            case .snippetArguments(let arguments): SnippetArgumentFields(state: arguments)
+                            case .clipboardText(let state): ClipboardEditField(state: state)
+                            case nil: EmptyView()
+                            }
+                        }
+                        .padding(.horizontal, metrics.spacing.xs)
+                        .padding(.top, metrics.spacing.xs)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                        actions
                     }
-                }
-
-                switch request.accessory {
-                case .volume(let volume): VolumeSlider(state: volume)
-                case .snippetArguments(let arguments): SnippetArgumentFields(state: arguments)
-                case .clipboardText(let state): ClipboardEditField(state: state)
-                case nil: EmptyView()
-                }
-            }
-            .padding(.horizontal, metrics.spacing.xs)
-            .padding(.top, metrics.spacing.xs)
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            actions
+                    .padding(metrics.spacing.dialogInset)
+                    .frame(width: width, alignment: .leading)
+                    .background(Theme.Colors.panelScrim, in: shape)
+                    .compatibleGlassEffect(in: shape)
         }
-        .padding(metrics.spacing.dialogInset)
-        .frame(width: width, alignment: .leading)
-        .background(Theme.Colors.panelScrim, in: shape)
-        .glassEffect(.regular, in: shape)
     }
 
     @ViewBuilder private var actions: some View {
@@ -118,15 +121,17 @@ private struct DialogSymbol: View {
     let tone: DialogTone
 
     var body: some View {
-        SymbolImage(name: name, size: metrics.size.dialogSymbol, monochrome: true)
-            .foregroundStyle(symbolTint)
-            .frame(
-                width: metrics.size.dialogSymbolContainer,
-                height: metrics.size.dialogSymbolContainer
-            )
-            .background(
-                RoundedRectangle(cornerRadius: metrics.radius.dialogSymbol, style: .continuous)
-                    .fill(tone.tileFill))
+        WithObservationTracking {
+            SymbolImage(name: name, size: metrics.size.dialogSymbol, monochrome: true)
+                        .foregroundStyle(symbolTint)
+                        .frame(
+                            width: metrics.size.dialogSymbolContainer,
+                            height: metrics.size.dialogSymbolContainer
+                        )
+                        .background(
+                            RoundedRectangle(cornerRadius: metrics.radius.dialogSymbol, style: .continuous)
+                                .fill(tone.tileFill))
+        }
     }
 
     /// Neutral glyphs need the same legibility as a key-cap symbol; semantic colours stay intact.
@@ -143,13 +148,15 @@ private struct DialogButton: View {
     let onActivate: () -> Void
 
     var body: some View {
-        Button(action: onActivate) {
-            Text(action.title)
-                .fixedSize(horizontal: singleLine, vertical: false)
-                .multilineTextAlignment(.center)
+        WithObservationTracking {
+            Button(action: onActivate) {
+                        Text(action.title)
+                            .fixedSize(horizontal: singleLine, vertical: false)
+                            .multilineTextAlignment(.center)
+                    }
+                    .buttonStyle(.modalAction(role))
+                    .tooltip(keyCaps: keyCaps)
         }
-        .buttonStyle(.modalAction(role))
-        .tooltip(keyCaps: keyCaps)
     }
 
     private var role: ModalActionButtonStyle.Role {

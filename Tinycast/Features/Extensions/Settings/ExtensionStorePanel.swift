@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct ExtensionStorePanel: View {
     let storeInstall: ExtensionDeepLink.StoreInstall?
@@ -22,30 +23,32 @@ struct ExtensionStorePanel: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
-            ExtensionSettingsEditorHeader(
-                title: storeInstall == nil
-                    ? String(localized: "Search Extensions") : String(localized: "Install Extension"),
-                subtitle: String(
-                    localized: """
-                        The Raycast Store's extensions arrive built, so they install as they are.
-                        """))
-            // The same borderless field the panes use, rather than a bordered capsule of its own.
-            if storeInstall == nil {
-                SettingsFilterField(prompt: "Search extensions…", query: $query)
-            }
-            content
-            // The list scrolls right up to the footer without it, cutting the last row.
-            Divider()
-            footer
-        }
-        .padding(Theme.Spacing.dialogInset)
-        .frame(width: 620, height: 560)
-        .extensionSettingsEditorPanelSurface()
-        .onChange(of: query) { _, value in scheduleSearch(value) }
-        .onDisappear { searchTask?.cancel() }
-        .task {
-            if let storeInstall { await loadListings(query: storeInstall.name) }
+        WithObservationTracking {
+            VStack(alignment: .leading, spacing: Theme.Spacing.lg) {
+                        ExtensionSettingsEditorHeader(
+                            title: storeInstall == nil
+                                ? String(localized: "Search Extensions") : String(localized: "Install Extension"),
+                            subtitle: String(
+                                localized: """
+                                    The Raycast Store's extensions arrive built, so they install as they are.
+                                    """))
+                        // The same borderless field the panes use, rather than a bordered capsule of its own.
+                        if storeInstall == nil {
+                            SettingsFilterField(prompt: "Search extensions…", query: $query)
+                        }
+                        content
+                        // The list scrolls right up to the footer without it, cutting the last row.
+                        Divider()
+                        footer
+                    }
+                    .padding(Theme.Spacing.dialogInset)
+                    .frame(width: 620, height: 560)
+                    .extensionSettingsEditorPanelSurface()
+                    .onChange(of: query) { _, value in scheduleSearch(value) }
+                    .onDisappear { searchTask?.cancel() }
+                    .task {
+                        if let storeInstall { await loadListings(query: storeInstall.name) }
+                    }
         }
     }
 
@@ -216,41 +219,43 @@ private struct StoreRow: View {
     @State private var hovered = false
 
     var body: some View {
-        HStack(alignment: .top, spacing: Theme.Spacing.xl) {
-            ExtensionIconView(
-                resolved: listing.iconURL(isDark: isDark).map {
-                    ExtensionImage.Resolved(source: .remote($0))
-                },
-                size: Self.iconSide)
-            VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
-                Text(listing.title)
-                    .font(.headline)
-                    .lineLimit(1)
-                if !listing.summary.isEmpty {
-                    Text(listing.summary)
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                facts
-                if case .failed(let message) = state {
-                    Label(message, systemImage: "exclamationmark.triangle")
-                        .font(.caption)
-                        .foregroundStyle(.orange)
-                        .lineLimit(3)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            Spacer(minLength: Theme.Spacing.md)
-            action
+        WithObservationTracking {
+            HStack(alignment: .top, spacing: Theme.Spacing.xl) {
+                        ExtensionIconView(
+                            resolved: listing.iconURL(isDark: isDark).map {
+                                ExtensionImage.Resolved(source: .remote($0))
+                            },
+                            size: Self.iconSide)
+                        VStack(alignment: .leading, spacing: Theme.Spacing.xs) {
+                            Text(listing.title)
+                                .font(.headline)
+                                .lineLimit(1)
+                            if !listing.summary.isEmpty {
+                                Text(listing.summary)
+                                    .font(.callout)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(2)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            facts
+                            if case .failed(let message) = state {
+                                Label(message, systemImage: "exclamationmark.triangle")
+                                    .font(.caption)
+                                    .foregroundStyle(.orange)
+                                    .lineLimit(3)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                        Spacer(minLength: Theme.Spacing.md)
+                        action
+                    }
+                    .padding(Theme.Spacing.lg)
+                    .background(
+                        RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
+                            .fill(hovered ? Theme.Colors.rowHover : .clear)
+                    )
+                    .onHover { hovered = $0 }
         }
-        .padding(Theme.Spacing.lg)
-        .background(
-            RoundedRectangle(cornerRadius: Theme.Radius.row, style: .continuous)
-                .fill(hovered ? Theme.Colors.rowHover : .clear)
-        )
-        .onHover { hovered = $0 }
     }
 
     private var facts: some View {
@@ -302,10 +307,12 @@ private struct StoreFact: View {
     let text: String
 
     var body: some View {
-        HStack(spacing: Theme.Spacing.xs) {
-            Image(systemName: symbol)
-            Text(text)
+        WithObservationTracking {
+            HStack(spacing: Theme.Spacing.xs) {
+                        Image(systemName: symbol)
+                        Text(text)
+                    }
+                    .lineLimit(1)
         }
-        .lineLimit(1)
     }
 }

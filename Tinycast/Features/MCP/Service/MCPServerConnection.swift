@@ -1,4 +1,5 @@
 import Foundation
+import ObservationPolyfill
 import Observation
 
 /// One configured server, from handshake to tool list to call; the transport under it varies.

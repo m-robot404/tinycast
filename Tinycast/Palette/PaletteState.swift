@@ -1,4 +1,5 @@
 import Foundation
+import ObservationPolyfill
 
 /// A screen to return to, held with enough state that going back looks like never having left.
 struct PaletteFrame: Equatable {

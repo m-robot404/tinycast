@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 struct AppleShortcutsSettingsView: View {
     @Environment(AppCore.self) private var core
@@ -15,27 +16,29 @@ struct AppleShortcutsSettingsView: View {
     }
 
     var body: some View {
-        @Bindable var settings = settings
-        return Form {
-            Section {
-                Toggle(isOn: $settings.appleShortcutsEnabled) {
-                    SettingsFeatureToggleLabel(
-                        anchor: .appleShortcutsAppleShortcuts,
-                        title: "Enable Apple Shortcuts",
-                        subtitle: "Run your shortcuts from the launcher.")
-                }
-            }
-            .settingsAnchor(.appleShortcutsAppleShortcuts)
+        WithObservationTracking {
+            @ObservationPolyfill.Bindable var settings = settings
+                    Form {
+                        Section {
+                            Toggle(isOn: $settings.appleShortcutsEnabled) {
+                                SettingsFeatureToggleLabel(
+                                    anchor: .appleShortcutsAppleShortcuts,
+                                    title: "Enable Apple Shortcuts",
+                                    subtitle: "Run your shortcuts from the launcher.")
+                            }
+                        }
+                        .settingsAnchor(.appleShortcutsAppleShortcuts)
 
-            if settings.appleShortcutsEnabled {
-                library
-            }
+                        if settings.appleShortcutsEnabled {
+                            library
+                        }
+                    }
+                    .formStyle(.grouped)
+                    .settingsScrollTarget(.appleShortcuts)
+                    .releasesFocusOnOutsideClick()
+                    // Shortcuts can change while Settings sits closed, so the pane reads them fresh.
+                    .task(id: settings.appleShortcutsEnabled) { core.appleShortcutCoordinator.refresh() }
         }
-        .formStyle(.grouped)
-        .settingsScrollTarget(.appleShortcuts)
-        .releasesFocusOnOutsideClick()
-        // Shortcuts can change while Settings sits closed, so the pane reads them fresh.
-        .task(id: settings.appleShortcutsEnabled) { core.appleShortcutCoordinator.refresh() }
     }
 
     private var library: some View {

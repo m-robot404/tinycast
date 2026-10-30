@@ -1,4 +1,5 @@
 import AppKit
+import ObservationPolyfill
 import SwiftUI
 
 /// Owns the result panel: one at a time, and the target app keeps its selection while it is up.

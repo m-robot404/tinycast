@@ -25,14 +25,10 @@ final class DictationAudioDucker {
     init(
         fileURL: URL = AppPaths.applicationSupport().appending(path: "dictation-volume.json"),
         defaultOutput: @escaping () throws -> Output? = {
-            try AudioHardwareSystem.shared.defaultOutputDevice.flatMap {
-                try DictationAudioDucker.output(for: $0)
-            }
+            try DictationAudioDucker.defaultOutput()
         },
         resolveOutput: @escaping (String) throws -> Output? = { uid in
-            try AudioHardwareSystem.shared.device(forUID: uid).flatMap {
-                try DictationAudioDucker.output(for: $0)
-            }
+            try DictationAudioDucker.output(forUID: uid)
         }
     ) {
         self.fileURL = fileURL
@@ -170,25 +166,100 @@ final class DictationAudioDucker {
         }.value
     }
 
-    private static func output(for device: AudioHardwareDevice) throws -> Output? {
-        guard let control = try device.controls.first(where: isMainOutputVolume) else { return nil }
-        return Output(
-            deviceUID: try device.uid,
-            read: { try control.volumeScalarValue }, write: { try control.setVolumeScalarValue($0) })
+    // Use the long-standing Core Audio HAL properties instead of AudioHardwareSystem,
+    // which was introduced in macOS 15.
+    private static func defaultOutput() throws -> Output? {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultOutputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain)
+        var deviceID = AudioObjectID(kAudioObjectUnknown)
+        var size = UInt32(MemoryLayout<AudioObjectID>.size)
+        try check(AudioObjectGetPropertyData(
+            kAudioObjectSystemObject, &address, 0, nil, &size, &deviceID))
+        guard deviceID != kAudioObjectUnknown else { return nil }
+        return try output(for: deviceID)
     }
 
-    private static func isMainOutputVolume(_ control: AudioHardwareControl) -> Bool {
-        guard (try? control.classID) == kAudioVolumeControlClassID else { return false }
-        func value(for selector: AudioObjectPropertySelector) -> UInt32? {
-            let address = AudioObjectPropertyAddress(
-                mSelector: selector, mScope: kAudioObjectPropertyScopeGlobal,
-                mElement: kAudioObjectPropertyElementMain)
-            guard let data = try? control.propertyData(address: address, qualifier: nil),
-                data.count == MemoryLayout<UInt32>.size
-            else { return nil }
-            return data.withUnsafeBytes { $0.loadUnaligned(as: UInt32.self) }
+    private static func output(forUID uid: String) throws -> Output? {
+        for deviceID in try deviceIDs() where try deviceUID(deviceID) == uid {
+            return try output(for: deviceID)
         }
-        return value(for: kAudioControlPropertyScope) == kAudioObjectPropertyScopeOutput
-            && value(for: kAudioControlPropertyElement) == kAudioObjectPropertyElementMain
+        return nil
+    }
+
+    private static func output(for deviceID: AudioObjectID) throws -> Output? {
+        let uid = try deviceUID(deviceID)
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyVolumeScalar,
+            mScope: kAudioObjectPropertyScopeOutput,
+            mElement: kAudioObjectPropertyElementMain)
+        guard AudioObjectHasProperty(deviceID, &address) else { return nil }
+        var settable = DarwinBoolean(false)
+        try check(AudioObjectIsPropertySettable(deviceID, &address, &settable))
+        guard settable.boolValue else { return nil }
+        let volumeAddress = address
+        return Output(
+            deviceUID: uid,
+            read: { try readFloat(deviceID, address: volumeAddress) },
+            write: { try writeFloat($0, deviceID: deviceID, address: volumeAddress) })
+    }
+
+    private static func deviceIDs() throws -> [AudioObjectID] {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDevices,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain)
+        var size: UInt32 = 0
+        try check(AudioObjectGetPropertyDataSize(kAudioObjectSystemObject, &address, 0, nil, &size))
+        let count = Int(size) / MemoryLayout<AudioObjectID>.size
+        guard count > 0 else { return [] }
+        var ids = [AudioObjectID](repeating: kAudioObjectUnknown, count: count)
+        let status = ids.withUnsafeMutableBufferPointer { buffer -> OSStatus in
+            guard let baseAddress = buffer.baseAddress else { return noErr }
+            return AudioObjectGetPropertyData(
+                kAudioObjectSystemObject, &address, 0, nil, &size, baseAddress)
+        }
+        try check(status)
+        return ids
+    }
+
+    private static func deviceUID(_ deviceID: AudioObjectID) throws -> String {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyDeviceUID,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain)
+        var uid: CFString?
+        var size = UInt32(MemoryLayout<CFString?>.size)
+        try check(AudioObjectGetPropertyData(deviceID, &address, 0, nil, &size, &uid))
+        guard let uid else {
+            throw NSError(domain: NSOSStatusErrorDomain, code: Int(kAudioHardwareBadDeviceError))
+        }
+        return uid as String
+    }
+
+    private static func readFloat(
+        _ objectID: AudioObjectID, address: AudioObjectPropertyAddress
+    ) throws -> Float {
+        var address = address
+        var value: Float = 0
+        var size = UInt32(MemoryLayout<Float>.size)
+        try check(AudioObjectGetPropertyData(objectID, &address, 0, nil, &size, &value))
+        return value
+    }
+
+    private static func writeFloat(
+        _ value: Float, deviceID: AudioObjectID, address: AudioObjectPropertyAddress
+    ) throws {
+        var address = address
+        var value = value
+        let size = UInt32(MemoryLayout<Float>.size)
+        try check(AudioObjectSetPropertyData(deviceID, &address, 0, nil, size, &value))
+    }
+
+    private static func check(_ status: OSStatus) throws {
+        guard status == noErr else {
+            throw NSError(domain: NSOSStatusErrorDomain, code: Int(status))
+        }
     }
 }

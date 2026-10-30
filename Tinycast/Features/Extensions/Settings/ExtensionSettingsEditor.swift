@@ -1,4 +1,5 @@
 import SwiftUI
+import ObservationPolyfill
 
 extension View {
     /// Extension-owned surface; the Settings shell only hosts it as an opaque box.
@@ -30,14 +31,16 @@ struct ExtensionSettingsEditorHeader: View {
     var subtitle: String?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
-            Text(title).font(Theme.Typography.panelTitle)
-            if let subtitle {
-                Text(subtitle)
-                    .font(Theme.Typography.rowTitle)
-                    .foregroundStyle(Theme.Colors.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
+        WithObservationTracking {
+            VStack(alignment: .leading, spacing: Theme.Spacing.sm) {
+                        Text(title).font(Theme.Typography.panelTitle)
+                        if let subtitle {
+                            Text(subtitle)
+                                .font(Theme.Typography.rowTitle)
+                                .foregroundStyle(Theme.Colors.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
         }
     }
 }
@@ -63,16 +66,18 @@ private struct ExtensionSettingsEditorButtonBody: View {
     @State private var hovered = false
 
     var body: some View {
-        configuration.label
-            .font(Theme.Typography.rowTrailing)
-            .foregroundStyle(labelColor)
-            .padding(.horizontal, Theme.Spacing.xl)
-            .frame(maxWidth: fillsWidth ? .infinity : nil)
-            .frame(height: Theme.Size.dialogButtonHeight)
-            .contentShape(Capsule())
-            .background(Capsule().fill(fill))
-            .opacity(isEnabled ? 1 : 0.45)
-            .onHover { hovered = $0 }
+        WithObservationTracking {
+            configuration.label
+                        .font(Theme.Typography.rowTrailing)
+                        .foregroundStyle(labelColor)
+                        .padding(.horizontal, Theme.Spacing.xl)
+                        .frame(maxWidth: fillsWidth ? .infinity : nil)
+                        .frame(height: Theme.Size.dialogButtonHeight)
+                        .contentShape(Capsule())
+                        .background(Capsule().fill(fill))
+                        .opacity(isEnabled ? 1 : 0.45)
+                        .onHover { hovered = $0 }
+        }
     }
 
     private var fill: Color {
