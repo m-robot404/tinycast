@@ -20,8 +20,8 @@ concurrency:
 
 jobs:
   build:
-    # Xcode 27 Apple Silicon runner. The SDK compiles against a macOS 13 deployment target;
-    # a separate real Ventura runtime check remains required.
+    # Use the current macOS 26 runner and its preselected Xcode SDK to compile against
+    # the macOS 13 deployment target; real Ventura runtime validation remains required.
     runs-on: macos-26
     timeout-minutes: 45
     steps:
