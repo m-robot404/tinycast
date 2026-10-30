@@ -99,8 +99,8 @@ private struct ChatHistoryRow: View {
     }
 
     var body: some View {
-        let _ = IconCache.observeStyle()
         WithObservationTracking {
+            let _ = IconCache.observeStyle()
             HStack(spacing: metrics.spacing.lg) {
                         Image(nsImage: IconCache.symbolIcon(named: "bubble.left")).resizable()
                             .frame(width: metrics.size.resultRowIcon, height: metrics.size.resultRowIcon)
