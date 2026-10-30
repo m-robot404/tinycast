@@ -282,7 +282,7 @@ private struct EmojiGridRowView: View {
                             hoveredColumn = nil
                         }
                     }
-                    .onChange(of: palette.hoverDisarmToken) { hoveredColumn = nil }
+                    .onChange(of: palette.hoverDisarmToken) { _ in hoveredColumn = nil }
         }
     }
 
