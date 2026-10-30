@@ -144,6 +144,10 @@ final class DictationCoordinator {
     }
 
     private func begin(target: InjectionTarget?) {
+        // Qwen's stateful Core ML API requires macOS 15; use the Parakeet engine on Ventura.
+        if !settings.dictationModel.isAvailableOnCurrentOS {
+            settings.dictationModel = .redux
+        }
         guard models.isInstalled(settings.dictationModel) else {
             field = nil
             showMessage(String(localized: "Download the dictation model in Settings first"), .danger)
