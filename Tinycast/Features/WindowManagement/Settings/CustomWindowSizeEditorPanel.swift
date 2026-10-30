@@ -118,7 +118,7 @@ struct CustomWindowSizeEditorPanel: View {
             .labelsHidden()
             .pickerStyle(.segmented)
             .controlSize(.large)
-            .buttonBorderShape(.roundedRectangle(radius: Theme.Radius.barControl))
+            .buttonBorderShape(.roundedRectangle)
             .fixedSize()
         }
     }
